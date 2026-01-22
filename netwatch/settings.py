@@ -132,8 +132,17 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Celery Configuration
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+# Celery/Redis configuration with Heroku rediss:// support
+def _maybe_add_ssl_params(url: str) -> str:
+    if not url:
+        return url
+    if url.startswith('rediss://') and 'ssl_cert_reqs' not in url:
+        separator = '&' if '?' in url else '?'
+        return f"{url}{separator}ssl_cert_reqs=none"
+    return url
+
+CELERY_BROKER_URL = _maybe_add_ssl_params(os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
+CELERY_RESULT_BACKEND = _maybe_add_ssl_params(os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'))
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
