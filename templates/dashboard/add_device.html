@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Device - NetWatch{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8 offset-md-2">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active">Add Device</li>
+            </ol>
+        </nav>
+        
+        <h1 class="h2 mb-4">
+            <i class="bi bi-plus-circle"></i> Add New Device
+        </h1>
+        
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Device Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               placeholder="e.g., POS-01, Server-Main" required>
+                        <small class="text-muted">Unique friendly name for the device</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="ip_address" class="form-label">IP Address *</label>
+                        <input type="text" class="form-control" id="ip_address" name="ip_address" 
+                               placeholder="e.g., 192.168.1.100" required>
+                        <small class="text-muted">IPv4 address of the device</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="device_type" class="form-label">Device Type *</label>
+                        <select class="form-select" id="device_type" name="device_type" required>
+                            <option value="">-- Select --</option>
+                            {% for value, label in device_types %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="unit" class="form-label">Unit (optional)</label>
+                        <select class="form-select" id="unit" name="unit" onchange="toggleNewUnit()">
+                            <option value="">-- No Unit --</option>
+                            {% for unit in units %}
+                                <option value="{{ unit.id }}">{{ unit.name }}</option>
+                            {% endfor %}
+                            <option value="_new">+ Create New Unit...</option>
+                        </select>
+                        <small class="text-muted">Assign device to a unit/brand/store</small>
+                    </div>
+
+                    <div class="mb-3 d-none" id="new-unit-section">
+                        <label for="new_unit_name" class="form-label">New Unit Name</label>
+                        <input type="text" class="form-control" id="new_unit_name" name="new_unit_name" 
+                               placeholder="e.g., Hunter Store 1">
+                        <small class="text-muted">Enter name for new unit</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location" 
+                               placeholder="e.g., Front Register, Back Office">
+                        <small class="text-muted">Physical location or area</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Additional information about this device..."></textarea>
+                    </div>
+
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="enabled" name="enabled" value="on" checked>
+                        <label class="form-check-label" for="enabled">
+                            Enabled (Start monitoring immediately)
+                        </label>
+                    </div>
+
+                    <div class="d-grid gap-2 d-sm-flex">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> Add Device
+                        </button>
+                        <a href="{% url 'dashboard:index' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4">
+            <i class="bi bi-info-circle"></i>
+            <strong>After adding:</strong> The device will appear on the dashboard. If you have an agent running, configure it with Device ID <strong id="device-id-placeholder">N/A</strong> (shown after creation).
+        </div>
+    </div>
+</div>
+
+{% if device_created %}
+<script>
+    document.getElementById('device-id-placeholder').textContent = '{{ device_id }}';
+</script>
+{% endif %}
+
+<script>
+function toggleNewUnit() {
+    const unitSelect = document.getElementById('unit');
+    const newUnitSection = document.getElementById('new-unit-section');
+    const newUnitInput = document.getElementById('new_unit_name');
+    
+    if (unitSelect.value === '_new') {
+        newUnitSection.classList.remove('d-none');
+        newUnitInput.required = true;
+        newUnitInput.focus();
+    } else {
+        newUnitSection.classList.add('d-none');
+        newUnitInput.required = false;
+        newUnitInput.value = '';
+    }
+}
+</script>
+
+{% endblock %}

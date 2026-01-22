@@ -1,0 +1,188 @@
+"""
+Celery tasks for monitoring devices.
+"""
+import logging
+import time
+from typing import Optional
+from celery import shared_task
+from django.utils import timezone
+from django.db.models import Q
+
+from apps.inventory.models import Device
+from apps.monitoring.models import CheckResult
+from apps.monitoring.engine import run_ping
+
+logger = logging.getLogger(__name__)
+
+
+@shared_task(bind=True, ignore_result=True)
+def run_all_monitoring_checks(self):
+    """
+    Run monitoring checks for all enabled devices.
+    This task is called periodically by Celery Beat.
+    """
+    enabled_devices = Device.objects.filter(enabled=True)
+    logger.info(f"Starting monitoring checks for {enabled_devices.count()} enabled devices")
+    
+    for device in enabled_devices:
+        try:
+            # Check if enough time has passed since last check
+            if device.last_check_at:
+                time_since_last_check = (timezone.now() - device.last_check_at).total_seconds()
+                if time_since_last_check < device.check_interval_seconds:
+                    logger.debug(f"Skipping {device.name}: checked {time_since_last_check:.1f}s ago")
+                    continue
+            
+            # Run the check for this device
+            check_device.delay(device.id)
+            
+        except Exception as e:
+            logger.error(f"Error scheduling check for {device.name}: {e}", exc_info=True)
+    
+    logger.info("Finished scheduling monitoring checks")
+
+
+@shared_task(bind=True, max_retries=3)
+def check_device(self, device_id: int):
+    """
+    Perform a complete monitoring check for a single device.
+    
+    Args:
+        device_id: ID of the device to check
+    """
+    try:
+        device = Device.objects.get(id=device_id)
+    except Device.DoesNotExist:
+        logger.error(f"Device {device_id} not found")
+        return
+    
+    if not device.enabled:
+        logger.debug(f"Device {device.name} is disabled, skipping check")
+        return
+    
+    logger.info(f"Checking device: {device.name} ({device.ip_address})")
+    
+    start_time = time.time()
+    errors = []
+    
+    # Initialize check result
+    check_result = CheckResult(device=device)
+    
+    # Ping check
+    if device.ping_enabled:
+        ping_ok, ping_ms, ping_error = run_ping(
+            device.ip_address,
+            timeout_ms=device.timeout_ms
+        )
+        check_result.ping_ok = ping_ok
+        check_result.ping_ms = ping_ms
+        if ping_error:
+            errors.append(f"Ping: {ping_error}")
+    else:
+        check_result.ping_ok = False
+        check_result.ping_ms = None
+    
+    # Determine overall status (UP if ping OK, DOWN if ping failed)
+    check_result.overall_status = check_result.determine_overall_status()
+    check_result.error_message = '\n'.join(errors) if errors else ''
+    
+    # Calculate total check duration
+    check_result.check_duration_ms = int((time.time() - start_time) * 1000)
+    
+    # Save check result
+    check_result.save()
+    
+    # Update device status if thresholds are met
+    old_status = device.last_status
+    
+    # Update device
+    device.last_check_at = timezone.now()
+    
+    # Compute overall status considering ping and agent health
+    new_status = device.compute_overall_status()
+    
+    if new_status != old_status:
+        device.last_status = new_status
+        device.last_status_change = timezone.now()
+        device.save(update_fields=['last_status', 'last_status_change', 'last_check_at'])
+        
+        # Record status change in history
+        from apps.monitoring.models import StatusChangeHistory
+        reason = "Ping failed" if not check_result.ping_ok else "Service/process status changed"
+        StatusChangeHistory.objects.create(
+            device=device,
+            old_status=old_status,
+            new_status=new_status,
+            reason=reason
+        )
+        
+        logger.info(f"Device {device.name} status changed: {old_status} → {new_status}")
+    else:
+        device.save(update_fields=['last_check_at'])
+    
+    logger.info(
+        f"Check complete for {device.name}: {new_status} "
+        f"(ping: {check_result.ping_ok}, {check_result.ping_ms}ms)"
+    )
+
+
+@shared_task(bind=True, ignore_result=True)
+def cleanup_old_check_results(self, keep_count: int = 500):
+    """
+    Clean up old check results, keeping only the most recent N per device.
+    
+    Args:
+        keep_count: Number of recent results to keep per device
+    """
+    logger.info(f"Starting cleanup of old check results (keeping {keep_count} per device)")
+    
+    devices = Device.objects.all()
+    total_deleted = 0
+    
+    for device in devices:
+        # Get IDs of results to keep
+        keep_ids = list(
+            CheckResult.objects.filter(device=device)
+            .order_by('-created_at')
+            .values_list('id', flat=True)[:keep_count]
+        )
+        
+        # Delete older results
+        deleted_count, _ = CheckResult.objects.filter(
+            device=device
+        ).exclude(id__in=keep_ids).delete()
+        
+        if deleted_count > 0:
+            total_deleted += deleted_count
+            logger.debug(f"Deleted {deleted_count} old results for {device.name}")
+    
+    logger.info(f"Cleanup complete: deleted {total_deleted} old check results")
+
+
+@shared_task(ignore_result=True)
+def cleanup_old_data():
+    """
+    Remove old check results and agent reports (data retention policy).
+    Keeps last 7 days of data, or last 1000 results per device.
+    Run this task daily via Celery Beat.
+    """
+    from datetime import timedelta
+    from apps.monitoring.models import AgentReport
+    
+    cutoff_date = timezone.now() - timedelta(days=7)
+    
+    # Delete old CheckResults
+    check_results_deleted, _ = CheckResult.objects.filter(
+        created_at__lt=cutoff_date
+    ).delete()
+    
+    # Delete old AgentReports
+    agent_reports_deleted, _ = AgentReport.objects.filter(
+        reported_at__lt=cutoff_date
+    ).delete()
+    
+    if check_results_deleted > 0 or agent_reports_deleted > 0:
+        logger.info(
+            f"Data retention: deleted {check_results_deleted} check results "
+            f"and {agent_reports_deleted} agent reports older than {cutoff_date}"
+        )

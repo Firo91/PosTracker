@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Units{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-diagram-3"></i> Manage Units</h1>
+        <p class="text-muted mb-0">Create units and assign devices in one place.</p>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+        <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+        <a href="{% url 'dashboard:unit_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-list"></i> View Units
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Create Unit</h5>
+                <p class="text-muted small">Unit creation will also assign any selected devices to it.</p>
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Unit Name</label>
+                        <input type="text" name="name" id="name" class="form-control {% if errors.name %}is-invalid{% endif %}" value="{{ form_data.name }}" required>
+                        {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location (optional)</label>
+                        <input type="text" name="location" id="location" class="form-control" value="{{ form_data.location }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (optional)</label>
+                        <textarea name="description" id="description" rows="3" class="form-control">{{ form_data.description }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assign Devices</label>
+                        <div class="border rounded p-2" style="max-height: 240px; overflow-y: auto;">
+                            {% for device in devices %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="devices" id="dev-{{ device.id }}" value="{{ device.id }}" {% if device.id|stringformat:'s' in form_data.devices %}checked{% endif %}>
+                                    <label class="form-check-label" for="dev-{{ device.id }}">
+                                        {{ device.name }}
+                                        {% if device.unit %}
+                                            <span class="text-muted small">(currently in {{ device.unit.name }})</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            {% empty %}
+                                <div class="text-muted">No devices available.</div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Selected devices will be moved into the new unit.</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Create Unit
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title">Existing Units</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Location</th>
+                                <th>Devices</th>
+                                <th>Created</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for unit in units %}
+                                <tr>
+                                    <td class="fw-semibold">{{ unit.name }}</td>
+                                    <td>{{ unit.location|default:'—' }}</td>
+                                    <td>{{ unit.device_count }}</td>
+                                    <td><small class="text-muted">{{ unit.created_at|date:'Y-m-d' }}</small></td>
+                                    <td class="text-end">
+                                        <a class="btn btn-sm btn-outline-primary" href="{% url 'dashboard:unit_detail' unit.id %}">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">No units created yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

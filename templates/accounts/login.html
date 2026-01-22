@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - NetWatch{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h1 class="h3">
+                            <i class="bi bi-speedometer2"></i> NetWatch
+                        </h1>
+                        <p class="text-muted">Device Monitoring Dashboard</p>
+                    </div>
+
+                    {% if error %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> {{ error }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-lg" 
+                                id="username" 
+                                name="username" 
+                                value="{{ username }}"
+                                placeholder="Enter your username" 
+                                required 
+                                autofocus
+                            >
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <input 
+                                type="password" 
+                                class="form-control form-control-lg" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Enter your password" 
+                                required
+                            >
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-box-arrow-in-right"></i> Sign In
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted small">
+                            <i class="bi bi-shield-lock"></i> Secure authentication required
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

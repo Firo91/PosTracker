@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - NetWatch{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="h2">
+            <i class="bi bi-speedometer2"></i> Device Monitoring Dashboard
+        </h1>
+        <p class="text-muted">Real-time status of your POS terminals and servers</p>
+    </div>
+        <div class="col-md-12">
+            <a href="{% url 'dashboard:add_device' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Add Device
+            </a>
+            <a href="{% url 'dashboard:manage_units' %}" class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-diagram-3"></i> Manage Units
+            </a>
+        </div>
+</div>
+
+<!-- Status Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stats-card border-success">
+            <div class="card-body text-center">
+                <h5 class="card-title text-success">
+                    <i class="bi bi-check-circle-fill"></i> Online
+                </h5>
+                <h2 class="mb-0">{{ status_summary.UP|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stats-card border-danger">
+            <div class="card-body text-center">
+                <h5 class="card-title text-danger">
+                    <i class="bi bi-x-circle-fill"></i> Offline
+                </h5>
+                <h2 class="mb-0">{{ status_summary.DOWN|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stats-card border-secondary">
+            <div class="card-body text-center">
+                <h5 class="card-title text-secondary">
+                    <i class="bi bi-question-circle-fill"></i> Unknown
+                </h5>
+                <h2 class="mb-0">{{ status_summary.UNKNOWN|default:0 }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-card">
+    <form method="get" class="row g-3">
+        <div class="col-md-2">
+            <label for="device_type" class="form-label">Device Type</label>
+            <select name="device_type" id="device_type" class="form-select">
+                <option value="">All Types</option>
+                {% for value, label in device_types %}
+                    <option value="{{ value }}" {% if filters.device_type == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="status" class="form-label">Status</label>
+            <select name="status" id="status" class="form-select">
+                <option value="">All Statuses</option>
+                {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="location" class="form-label">Location</label>
+            <select name="location" id="location" class="form-select">
+                <option value="">All Locations</option>
+                {% for loc in locations %}
+                    <option value="{{ loc }}" {% if filters.location == loc %}selected{% endif %}>
+                        {{ loc }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="unit" class="form-label">Unit</label>
+            <select name="unit" id="unit" class="form-select">
+                <option value="">All Units</option>
+                {% for unit in units %}
+                    <option value="{{ unit.id }}" {% if filters.unit|default:'' == unit.id|stringformat:'s' %}selected{% endif %}>
+                        {{ unit.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label for="enabled" class="form-label">Enabled</label>
+            <select name="enabled" id="enabled" class="form-select">
+                <option value="all" {% if filters.enabled == 'all' %}selected{% endif %}>All</option>
+                <option value="enabled" {% if filters.enabled == 'enabled' %}selected{% endif %}>Enabled Only</option>
+                <option value="disabled" {% if filters.enabled == 'disabled' %}selected{% endif %}>Disabled Only</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="search" class="form-label">Search</label>
+            <input type="text" name="search" id="search" class="form-control" 
+                   placeholder="Name or IP..." value="{{ filters.search }}">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">
+                <i class="bi bi-funnel"></i>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Device Table -->
+<div class="device-table">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Device Name</th>
+                    <th>Unit</th>
+                    <th>IP Address</th>
+                    <th>Type</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Ping</th>
+                    <th>Agent</th>
+                    <th>Processes</th>
+                    <th>Last Check</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td><span class="text-muted">{{ device.id }}</span></td>
+                    <td>
+                        <strong>{{ device.name }}</strong>
+                        {% if not device.enabled %}
+                            <span class="badge bg-secondary">Disabled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if device.unit %}
+                            <a href="{% url 'dashboard:unit_detail' device.unit.id %}">{{ device.unit.name }}</a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td><code>{{ device.ip_address }}</code></td>
+                    <td>
+                        <span class="badge bg-info">
+                            {{ device.get_device_type_display }}
+                        </span>
+                    </td>
+                    <td>{{ device.location|default:"—" }}</td>
+                    <td>
+                        <span class="badge bg-{{ device.get_status_display_color }} status-badge">
+                            {{ device.get_last_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if device.ping_enabled %}
+                            {% with latest=device.check_results.first %}
+                                {% if latest.ping_ok %}
+                                    <span class="check-indicator success"></span>{{ latest.ping_ms }}ms
+                                {% else %}
+                                    <span class="check-indicator danger"></span>Failed
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% with agent=device.agent_reports.first latest_ping=device.check_results.first %}
+                            {% if latest_ping and not latest_ping.ping_ok %}
+                                <span class="text-muted"><i class="bi bi-dash-circle"></i> Offline</span>
+                            {% elif agent %}
+                                {% if agent.agent_healthy %}
+                                    <span class="check-indicator success"></span>Processes OK
+                                {% else %}
+                                    <span class="check-indicator danger"></span>Process Error
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% with agent=device.agent_reports.first latest_ping=device.check_results.first %}
+                            {% if latest_ping and not latest_ping.ping_ok %}
+                                <span class="text-muted text-decoration-line-through">Stale</span>
+                            {% elif agent and agent.processes_status %}
+                                {% for name, proc in agent.processes_status.items %}
+                                    {% if proc.running %}
+                                        <span class="badge bg-success">{{ name }} (running)</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">{{ name }} (stopped)</span>
+                                    {% endif %}
+                                {% empty %}
+                                    <span class="text-muted">—</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% if device.last_check_at %}
+                            <small>{{ device.last_check_at|timesince }} ago</small>
+                        {% else %}
+                            <span class="text-muted">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'dashboard:device_detail' device.id %}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> Details
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                        <p class="mb-0">No devices found matching your filters.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh page every 30 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
+</script>
+{% endblock %}

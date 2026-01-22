@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-3">
+    <div>
+        <div class="text-muted small">Unit</div>
+        <h2 class="mb-0">{{ unit.name }}</h2>
+        {% if unit.location %}<div class="text-muted">{{ unit.location }}</div>{% endif %}
+    </div>
+    <div class="ms-auto d-flex gap-2">
+        <a href="{% url 'dashboard:units' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> All Units
+        </a>
+        <a href="{% url 'dashboard:index' %}" class="btn btn-outline-primary">
+            <i class="bi bi-grid"></i> Dashboard
+        </a>
+    </div>
+</div>
+{% if unit.description %}
+    <p class="text-muted">{{ unit.description }}</p>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Online</div>
+                <div class="h4 mb-0 text-success">{{ status_summary.online|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Offline</div>
+                <div class="h4 mb-0 text-danger">{{ status_summary.offline|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Unknown</div>
+                <div class="h4 mb-0 text-muted">{{ status_summary.unknown|default:0 }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="text-muted small">Total</div>
+                <div class="h4 mb-0">{{ status_summary.online|add:status_summary.offline|add:status_summary.unknown }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 8%">ID</th>
+                    <th style="width: 24%">Device Name</th>
+                    <th style="width: 18%">IP Address</th>
+                    <th style="width: 14%">Type</th>
+                    <th style="width: 14%">Location</th>
+                    <th style="width: 22%">Last Seen</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if devices %}
+                    {% for device in devices %}
+                        <tr>
+                            <td class="text-muted">{{ device.id }}</td>
+                            <td>
+                                <a href="{% url 'dashboard:device_detail' device.id %}" class="fw-semibold">{{ device.name }}</a>
+                                {% if not device.enabled %}
+                                    <span class="badge bg-secondary">Disabled</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ device.ip_address|default:'—' }}</td>
+                            <td>{{ device.device_type|default:'—' }}</td>
+                            <td>{{ device.location|default:'—' }}</td>
+                            <td>
+                                {% if device.last_seen %}
+                                    {{ device.last_seen|naturaltime }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No devices in this unit.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

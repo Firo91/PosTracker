@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ device.name }} - NetWatch{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <style>
+            .threshold-marker {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #dc3545;
+                opacity: 0.8;
+            }
+        </style>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'dashboard:index' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active">{{ device.name }}</li>
+            </ol>
+        </nav>
+        
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h2">
+                    <i class="bi bi-laptop"></i> 
+                    {{ device.name }}
+                </h1>
+                <p class="text-muted mb-0">
+                    <code>{{ device.ip_address }}</code> • 
+                    {{ device.get_device_type_display }} • 
+                    {{ device.location|default:"No location set" }}
+                </p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="{% url 'dashboard:edit_device' device.id %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> Edit Device
+                </a>
+                <span class="badge bg-{{ device.get_status_display_color }} fs-5 px-3 py-2">
+                    {{ device.get_last_status_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Information -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Device Info</h5>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Type:</strong></td>
+                        <td>{{ device.get_device_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>IP:</strong></td>
+                        <td><code>{{ device.ip_address }}</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Location:</strong></td>
+                        <td>{{ device.location|default:"—" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Enabled:</strong></td>
+                        <td>
+                            {% if device.enabled %}
+                                <span class="text-success">✓ Yes</span>
+                            {% else %}
+                                <span class="text-danger">✗ No</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Current Status</h5>
+                {% if latest_result %}
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Ping:</strong></td>
+                            <td>
+                                {% if latest_result.ping_ok %}
+                                    <span class="text-success">✓ {{ latest_result.ping_ms }}ms</span>
+                                {% else %}
+                                    <span class="text-danger">✗ Failed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Last Check:</strong></td>
+                            <td>{{ device.last_check_at|timesince }} ago</td>
+                        </tr>
+                    </table>
+                {% else %}
+                    <p class="text-muted">No check results yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">System Metrics</h5>
+                {% if latest_agent_report %}
+                    {% if latest_agent_report.cpu_percent and latest_agent_report.cpu_percent > 85 or latest_agent_report.memory_percent and latest_agent_report.memory_percent > 90 or latest_agent_report.disk_percent and latest_agent_report.disk_percent > 90 or latest_agent_report.uptime_hours and latest_agent_report.uptime_hours > 720 %}
+                        <div class="alert alert-warning d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <div>
+                                <div class="fw-bold">Health Warnings</div>
+                                <ul class="mb-0 small ps-3">
+                                    {% if latest_agent_report.cpu_percent and latest_agent_report.cpu_percent > 85 %}
+                                        <li>CPU high: {{ latest_agent_report.cpu_percent }}%</li>
+                                    {% endif %}
+                                    {% if latest_agent_report.memory_percent and latest_agent_report.memory_percent > 90 %}
+                                        <li>Memory high: {{ latest_agent_report.memory_percent }}% ({{ latest_agent_report.memory_used_gb|floatformat:1 }} / {{ latest_agent_report.memory_total_gb|floatformat:1 }} GB)</li>
+                                    {% endif %}
+                                    {% if latest_agent_report.disk_percent and latest_agent_report.disk_percent > 90 %}
+                                        <li>Disk nearly full: {{ latest_agent_report.disk_percent }}% used ({{ latest_agent_report.disk_free_gb|floatformat:1 }} GB free)</li>
+                                    {% endif %}
+                                    {% if latest_agent_report.uptime_hours and latest_agent_report.uptime_hours > 720 %}
+                                        <li>Uptime over 30 days ({{ latest_agent_report.uptime_hours|floatformat:0 }} hours). Consider reboot if issues persist.</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    {% endif %}
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <h6 class="text-muted mb-2">CPU Usage</h6>
+                                <div class="progress position-relative" style="height: 25px;">
+                                    <div class="threshold-marker" style="left: 85%;"></div>
+                                    <div class="progress-bar {% if latest_agent_report.cpu_percent > 80 %}bg-danger{% elif latest_agent_report.cpu_percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ latest_agent_report.cpu_percent }}%">
+                                        {{ latest_agent_report.cpu_percent }}%
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <h6 class="text-muted mb-2">Memory</h6>
+                                <div class="progress position-relative" style="height: 25px;">
+                                    <div class="threshold-marker" style="left: 90%;"></div>
+                                    <div class="progress-bar {% if latest_agent_report.memory_percent > 90 %}bg-danger{% elif latest_agent_report.memory_percent > 75 %}bg-warning{% else %}bg-info{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ latest_agent_report.memory_percent }}%">
+                                        {{ latest_agent_report.memory_percent }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ latest_agent_report.memory_used_gb|floatformat:1 }} / {{ latest_agent_report.memory_total_gb|floatformat:1 }} GB</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="text-center">
+                                <h6 class="text-muted mb-2">Disk (C:)</h6>
+                                <div class="progress position-relative" style="height: 25px;">
+                                    <div class="threshold-marker" style="left: 90%;"></div>
+                                    <div class="progress-bar {% if latest_agent_report.disk_percent > 90 %}bg-danger{% elif latest_agent_report.disk_percent > 75 %}bg-warning{% else %}bg-primary{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ latest_agent_report.disk_percent }}%">
+                                        {{ latest_agent_report.disk_percent }}%
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ latest_agent_report.disk_free_gb|floatformat:1 }} GB free</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> Uptime: {{ latest_agent_report.uptime_hours|floatformat:1 }} hours
+                            </small>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <small class="text-muted">
+                                <i class="bi bi-cpu"></i> {{ latest_agent_report.process_count }} processes
+                            </small>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No system metrics available yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Process Monitoring -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Agent Status</h5>
+                {% with agent=device.agent_reports.first %}
+                    {% if agent %}
+                        <p class="mb-2">
+                            <strong>Health:</strong>
+                            {% if agent.agent_healthy %}
+                                <span class="badge bg-success">Healthy</span>
+                            {% else %}
+                                <span class="badge bg-danger">Unhealthy</span>
+                            {% endif %}
+                        </p>
+                        <p class="text-muted small">Last Report: {{ agent.reported_at|timesince }} ago</p>
+                        
+                        {% if agent.processes_status %}
+                            <h6 class="mt-3">Processes</h6>
+                            <table class="table table-sm">
+                                {% for name, process in agent.processes_status.items %}
+                                <tr>
+                                    <td><strong>{{ name }}</strong></td>
+                                    <td>
+                                        {% if process.running %}
+                                            <span class="badge bg-success">Running ({{ process.count }})</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Not Running</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </table>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted">No agent reports yet.</p>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Time Range Selector -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <a href="?hours=1" class="btn btn-sm {% if hours == 1 %}btn-primary{% else %}btn-outline-primary{% endif %}">1 Hour</a>
+        <a href="?hours=6" class="btn btn-sm {% if hours == 6 %}btn-primary{% else %}btn-outline-primary{% endif %}">6 Hours</a>
+        <a href="?hours=24" class="btn btn-sm {% if hours == 24 %}btn-primary{% else %}btn-outline-primary{% endif %}">24 Hours</a>
+        <a href="?hours=168" class="btn btn-sm {% if hours == 168 %}btn-primary{% else %}btn-outline-primary{% endif %}">7 Days</a>
+    </div>
+</div>
+
+<!-- Status Change History -->
+{% if status_changes %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Recent Status Changes</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Change</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in status_changes %}
+                    <tr>
+                        <td><small>{{ change.changed_at|date:"Y-m-d H:i:s" }}</small></td>
+                        <td>
+                            <span class="badge bg-{% if change.old_status == 'UP' %}success{% elif change.old_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
+                                {{ change.old_status }}
+                            </span>
+                            → 
+                            <span class="badge bg-{% if change.new_status == 'UP' %}success{% elif change.new_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
+                                {{ change.new_status }}
+                            </span>
+                        </td>
+                        <td><small>{{ change.reason }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Check History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Check History</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Ping</th>
+                        <th>Duration</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in recent_results %}
+                    <tr>
+                        <td>
+                            <small>{{ result.created_at|date:"Y-m-d H:i:s" }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if result.overall_status == 'UP' %}success{% elif result.overall_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
+                                {{ result.overall_status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if result.ping_ok %}
+                                <span class="text-success">✓ {{ result.ping_ms }}ms</span>
+                            {% else %}
+                                <span class="text-danger">✗</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if result.check_duration_ms %}
+                                {{ result.check_duration_ms }}ms
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if result.error_message %}
+                                <small class="text-danger" title="{{ result.error_message }}">
+                                    {{ result.error_message|truncatewords:5 }}
+                                </small>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">
+                            No check results in the selected time range.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

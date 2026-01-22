@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <h2 class="mb-0">Units</h2>
+    <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary ms-auto">
+        <i class="bi bi-arrow-left"></i> Dashboard
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 28%">Unit</th>
+                    <th style="width: 18%">Online</th>
+                    <th style="width: 18%">Offline</th>
+                    <th style="width: 18%">Unknown</th>
+                    <th style="width: 18%">Total Devices</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if units %}
+                    {% for unit in units %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'dashboard:unit_detail' unit.id %}" class="fw-semibold">{{ unit.name }}</a>
+                                {% if unit.description %}
+                                    <div class="text-muted small">{{ unit.description }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-success fw-semibold">{{ unit.online_count }}</td>
+                            <td class="text-danger fw-semibold">{{ unit.offline_count }}</td>
+                            <td class="text-muted fw-semibold">{{ unit.unknown_count }}</td>
+                            <td class="fw-semibold">{{ unit.device_count }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">No units found.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

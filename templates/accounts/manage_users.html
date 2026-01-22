@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Users - NetWatch{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-0"><i class="bi bi-people"></i> User Management</h1>
+        <p class="text-muted mb-0">Manage system users and permissions.</p>
+    </div>
+    <div class="ms-auto">
+        <a href="{% url 'accounts:add_user' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add User
+        </a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Username</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Permissions</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user_obj in users %}
+                        <tr>
+                            <td>
+                                <strong>{{ user_obj.username }}</strong>
+                                {% if user_obj.id == user.id %}
+                                    <span class="badge bg-info">You</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user_obj.get_full_name|default:"—" }}</td>
+                            <td>{{ user_obj.email|default:"—" }}</td>
+                            <td>
+                                {% if user_obj.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user_obj.is_superuser %}
+                                    <span class="badge bg-danger">Superuser</span>
+                                {% elif user_obj.is_staff %}
+                                    <span class="badge bg-warning">Staff</span>
+                                {% else %}
+                                    <span class="badge bg-light text-dark">User</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user_obj.date_joined|date:"Y-m-d" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'accounts:edit_user' user_obj.id %}" class="btn btn-outline-primary">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                    {% if user_obj.id != user.id %}
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                onclick="confirmDelete('{{ user_obj.username }}', {{ user_obj.id }})">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No users found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<form id="delete-form" method="post" style="display: none;">
+    {% csrf_token %}
+</form>
+
+<script>
+function confirmDelete(username, userId) {
+    if (confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        const form = document.getElementById('delete-form');
+        form.action = `/accounts/users/${userId}/delete/`;
+        form.submit();
+    }
+}
+</script>
+{% endblock %}
