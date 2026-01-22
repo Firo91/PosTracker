@@ -182,8 +182,9 @@ LOGGING = {
             'formatter': 'verbose',
         },
         'queue': {
-            'class': 'logging.handlers.QueueHandler',
-            'queue': 'queue.Queue',
+            # Fallback to console in environments without a QueueHandler queue (e.g., Heroku build/collectstatic)
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
