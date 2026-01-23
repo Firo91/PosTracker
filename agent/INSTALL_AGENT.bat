@@ -17,19 +17,32 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-REM Prompt for configuration
-set /p SERVER_URL="Enter NetWatch server URL (e.g., http://10.18.70.71:8000): "
-set /p DEVICE_ID="Enter Device ID from dashboard: "
+REM Check if agent_config.json exists (pre-configured from download)
+if not exist "%~dp0agent_config.json" (
+    echo ERROR: agent_config.json not found!
+    echo.
+    echo Please download a pre-configured agent package from the web interface:
+    echo https://www.pos.kimsit.com/dashboard/download-agent/
+    echo.
+    echo Or manually edit agent_config.json before running this installer.
+    echo.
+    pause
+    exit /b 1
+)
 
 echo.
-echo Installing NetWatch Agent with:
-echo   Server: %SERVER_URL%
-echo   Device ID: %DEVICE_ID%
+echo Using pre-configured settings from agent_config.json
+echo.
+echo ========================================
+echo   Installing NetWatch Agent
+echo ========================================
 echo   Schedule: Every 1 minute
+echo   Config: agent_config.json
 echo.
 
 REM Run PowerShell installer with execution policy bypass
-powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%~dp0install_agent_task.ps1" -Action install -ServerUrl "%SERVER_URL%" -DeviceId %DEVICE_ID% -IntervalMinutes 1
+REM The installer will auto-detect and use agent_config.json
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%~dp0install_agent_task.ps1" -Action install -IntervalMinutes 1
 
 if %errorLevel% equ 0 (
     echo.
