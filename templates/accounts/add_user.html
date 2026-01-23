@@ -77,18 +77,49 @@
                     <div class="mb-3">
                         <label class="form-label">Permissions</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_staff" name="is_staff" 
-                                   {% if form_data.is_staff %}checked{% endif %}>
-                            <label class="form-check-label" for="is_staff">
-                                Staff status (Can access admin interface)
+                            <input class="form-check-input" type="checkbox" id="can_manage_tokens" name="can_manage_tokens" 
+                                   {% if form_data.can_manage_tokens %}checked{% endif %}>
+                            <label class="form-check-label" for="can_manage_tokens">
+                                <strong>Manage API Tokens</strong>
+                                <small class="d-block text-muted">Can create, edit, and delete API tokens</small>
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="is_superuser" name="is_superuser" 
-                                   {% if form_data.is_superuser %}checked{% endif %}>
-                            <label class="form-check-label" for="is_superuser">
-                                Superuser status (Full permissions)
+                            <input class="form-check-input" type="checkbox" id="can_create_tokens" name="can_create_tokens" 
+                                   {% if form_data.can_create_tokens %}checked{% endif %}>
+                            <label class="form-check-label" for="can_create_tokens">
+                                <strong>Create API Tokens</strong>
+                                <small class="d-block text-muted">Can create new API tokens</small>
                             </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Location Access</label>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="view_all_locations" name="view_all_locations" 
+                                   {% if form_data.view_all_locations %}checked{% endif %}>
+                            <label class="form-check-label" for="view_all_locations">
+                                <strong>View All Locations</strong>
+                                <small class="d-block text-muted">User can see devices from all units/countries</small>
+                            </label>
+                        </div>
+                        
+                        <div id="units-section" {% if form_data.view_all_locations %}style="display: none;"{% endif %}>
+                            <label class="form-label">Allowed Units/Countries</label>
+                            <div class="border rounded p-3" style="max-height: 250px; overflow-y: auto;">
+                                {% for unit in units %}
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="unit_{{ unit.id }}" 
+                                               name="allowed_units" value="{{ unit.id }}">
+                                        <label class="form-check-label" for="unit_{{ unit.id }}">
+                                            {{ unit.name }}
+                                        </label>
+                                    </div>
+                                {% empty %}
+                                    <p class="text-muted mb-0">No units available.</p>
+                                {% endfor %}
+                            </div>
                         </div>
                     </div>
 
@@ -105,4 +136,12 @@
         </div>
     </div>
 </div>
+
+<script>
+    // Toggle units section based on view_all_locations
+    document.getElementById('view_all_locations').addEventListener('change', function() {
+        const unitsSection = document.getElementById('units-section');
+        unitsSection.style.display = this.checked ? 'none' : 'block';
+    });
+</script>
 {% endblock %}

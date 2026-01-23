@@ -17,6 +17,7 @@ from django.conf import settings
 
 from apps.inventory.models import Device, APIToken, Unit
 from apps.monitoring.models import CheckResult, AgentReport, StatusChangeHistory
+from apps.accounts.models import UserProfile
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 def dashboard_view(request):
     """
     Main dashboard showing all devices with their current status.
+    Filters devices based on user permissions.
     """
     # Get filter parameters
     device_type = request.GET.get('device_type', '')
@@ -34,8 +36,25 @@ def dashboard_view(request):
     search = request.GET.get('search', '')
     enabled_filter = request.GET.get('enabled', 'all')
 
-    # Start with all devices
-    devices = Device.objects.all()
+    # Get user's allowed devices
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+    except UserProfile.DoesNotExist:
+        # Create profile if it doesn't exist (e.g., for superusers)
+        profile = UserProfile.objects.create(
+            user=request.user,
+            view_all_locations=request.user.is_superuser
+        )
+    
+    # Start with all devices or filter by permission
+    if profile.view_all_locations or request.user.is_superuser:
+        devices = Device.objects.all()
+    else:
+        # Filter by allowed units and locations
+        devices = Device.objects.filter(
+            Q(unit__in=profile.allowed_units.all()) |
+            Q(location__in=profile.allowed_locations)
+        ).distinct()
 
     # Apply filters
     if device_type:
@@ -60,16 +79,21 @@ def dashboard_view(request):
     elif enabled_filter == 'disabled':
         devices = devices.filter(enabled=False)
 
-    # Get status counts for summary
-    status_counts = Device.objects.filter(enabled=True).values('last_status').annotate(
+    # Get status counts for summary (from filtered devices)
+    status_counts = devices.filter(enabled=True).values('last_status').annotate(
         count=Count('id')
     )
     status_summary = {item['last_status']: item['count'] for item in status_counts}
 
-    # Get distinct locations for filter dropdown
-    locations = Device.objects.values_list('location', flat=True).distinct().order_by('location')
+    # Get distinct locations for filter dropdown (from accessible devices)
+    locations = devices.values_list('location', flat=True).distinct().order_by('location')
     locations = [loc for loc in locations if loc]  # Filter out empty strings
-    units = Unit.objects.order_by('name')
+    
+    # Get units user can see
+    if profile.view_all_locations or request.user.is_superuser:
+        units = Unit.objects.order_by('name')
+    else:
+        units = profile.allowed_units.order_by('name')
 
     context = {
         'devices': devices.order_by('name'),

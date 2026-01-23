@@ -1,5 +1,5 @@
 """
-Views for authentication.
+Views for authentication and user management.
 """
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
@@ -9,6 +9,8 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.http import HttpResponseForbidden
+from apps.accounts.models import UserProfile
+from apps.inventory.models import Unit
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +80,9 @@ def manage_users(request):
 @login_required
 @superuser_required
 def add_user(request):
-    """Create a new user."""
+    """Create a new user with profile settings."""
+    units = Unit.objects.all().order_by('name')
+    
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
@@ -86,8 +90,10 @@ def add_user(request):
         password_confirm = request.POST.get('password_confirm', '').strip()
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
-        is_staff = request.POST.get('is_staff') == 'on'
-        is_superuser = request.POST.get('is_superuser') == 'on'
+        can_manage_tokens = request.POST.get('can_manage_tokens') == 'on'
+        can_create_tokens = request.POST.get('can_create_tokens') == 'on'
+        view_all_locations = request.POST.get('view_all_locations') == 'on'
+        allowed_units = request.POST.getlist('allowed_units')
         
         errors = {}
         
@@ -111,9 +117,18 @@ def add_user(request):
                 first_name=first_name,
                 last_name=last_name,
             )
-            user.is_staff = is_staff
-            user.is_superuser = is_superuser
-            user.save()
+            
+            # Create profile with permissions
+            profile = UserProfile.objects.create(
+                user=user,
+                can_manage_tokens=can_manage_tokens,
+                can_create_tokens=can_create_tokens,
+                view_all_locations=view_all_locations,
+            )
+            
+            # Add allowed units
+            if allowed_units:
+                profile.allowed_units.set(allowed_units)
             
             logger.info(f'User {username} created by {request.user.username}')
             messages.success(request, f'User "{username}" created successfully.')
@@ -126,29 +141,40 @@ def add_user(request):
                 'email': email,
                 'first_name': first_name,
                 'last_name': last_name,
-                'is_staff': is_staff,
-                'is_superuser': is_superuser,
-            }
+                'can_manage_tokens': can_manage_tokens,
+                'can_create_tokens': can_create_tokens,
+                'view_all_locations': view_all_locations,
+            },
+            'units': units,
         }
         return render(request, 'accounts/add_user.html', context)
     
-    return render(request, 'accounts/add_user.html')
+    context = {'units': units}
+    return render(request, 'accounts/add_user.html', context)
 
 
 @login_required
 @superuser_required
 def edit_user(request, user_id):
-    """Edit an existing user."""
+    """Edit an existing user and their permissions."""
     user = get_object_or_404(User, id=user_id)
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    units = Unit.objects.all().order_by('name')
     
     if request.method == 'POST':
-        user.username = request.POST.get('username', user.username).strip()
-        user.email = request.POST.get('email', '').strip()
         user.first_name = request.POST.get('first_name', '').strip()
         user.last_name = request.POST.get('last_name', '').strip()
+        user.email = request.POST.get('email', '').strip()
         user.is_active = request.POST.get('is_active') == 'on'
-        user.is_staff = request.POST.get('is_staff') == 'on'
-        user.is_superuser = request.POST.get('is_superuser') == 'on'
+        
+        # Update profile permissions
+        profile.can_manage_tokens = request.POST.get('can_manage_tokens') == 'on'
+        profile.can_create_tokens = request.POST.get('can_create_tokens') == 'on'
+        profile.view_all_locations = request.POST.get('view_all_locations') == 'on'
+        
+        # Update allowed units
+        allowed_units = request.POST.getlist('allowed_units')
+        profile.allowed_units.set(allowed_units)
         
         # Handle password change if provided
         new_password = request.POST.get('new_password', '').strip()
@@ -162,13 +188,19 @@ def edit_user(request, user_id):
         
         try:
             user.save()
+            profile.save()
             logger.info(f'User {user.username} updated by {request.user.username}')
             messages.success(request, f'User "{user.username}" updated successfully.')
             return redirect('accounts:manage_users')
         except Exception as e:
             messages.error(request, f'Error updating user: {str(e)}')
     
-    context = {'user_obj': user}
+    context = {
+        'user_obj': user,
+        'profile': profile,
+        'units': units,
+        'allowed_unit_ids': profile.allowed_units.values_list('id', flat=True),
+    }
     return render(request, 'accounts/edit_user.html', context)
 
 
