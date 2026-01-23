@@ -65,11 +65,35 @@ try {
         'install' {
             if (-not (Test-Path $ScriptPath)) { throw "Script not found: $ScriptPath" }
 
-        # Optionally update agent_config.json
-        $cfgPath = Join-Path $ScriptDir 'agent_config.json'
-        if ($PSBoundParameters.ContainsKey('ServerUrl') -or $PSBoundParameters.ContainsKey('DeviceId')) {
-            Update-AgentConfig -ConfigPath $cfgPath -ServerUrl $ServerUrl -DeviceId $DeviceId
-        }
+            # Check if agent_config.json already exists and is valid
+            $cfgPath = Join-Path $ScriptDir 'agent_config.json'
+            $configValid = $false
+            
+            if (Test-Path $cfgPath) {
+                try {
+                    $existingConfig = Get-Content $cfgPath -Raw | ConvertFrom-Json
+                    if ($existingConfig.server_url -and $existingConfig.device_id -and $existingConfig.api_key) {
+                        Write-Host "Found valid agent_config.json - using existing configuration:" -ForegroundColor Green
+                        Write-Host "  Server: $($existingConfig.server_url)" -ForegroundColor Cyan
+                        Write-Host "  Device ID: $($existingConfig.device_id)" -ForegroundColor Cyan
+                        Write-Host "  API Key: ***$(($existingConfig.api_key).Substring([Math]::Max(0, $existingConfig.api_key.Length - 4)))" -ForegroundColor Cyan
+                        $configValid = $true
+                    }
+                } catch {
+                    Write-Host "Warning: Could not parse existing config, will update if needed" -ForegroundColor Yellow
+                }
+            }
+
+            # Only update config if parameters provided AND config not already valid
+            if (-not $configValid -and ($PSBoundParameters.ContainsKey('ServerUrl') -or $PSBoundParameters.ContainsKey('DeviceId'))) {
+                Update-AgentConfig -ConfigPath $cfgPath -ServerUrl $ServerUrl -DeviceId $DeviceId
+            }
+            elseif (-not $configValid -and -not $PSBoundParameters.ContainsKey('ServerUrl')) {
+                Write-Host "" -ForegroundColor Yellow
+                Write-Host "No agent_config.json found. Please download a pre-configured agent from the web interface," -ForegroundColor Yellow
+                Write-Host "or provide -ServerUrl and -DeviceId parameters." -ForegroundColor Yellow
+                Write-Host "" -ForegroundColor Yellow
+            }
 
             $exe = (Get-Command powershell.exe).Source
             # Use --once when running via a repeating trigger (PowerShell 5.1 compatible)
