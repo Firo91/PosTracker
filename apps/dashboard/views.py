@@ -2,14 +2,18 @@
 Views for the dashboard app.
 """
 import logging
+import os
+import zipfile
+from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q, Count
 from django.utils import timezone
 from datetime import timedelta
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
+from django.conf import settings
 
 from apps.inventory.models import Device, APIToken, Unit
 from apps.monitoring.models import CheckResult, AgentReport, StatusChangeHistory
@@ -509,3 +513,101 @@ def manage_units(request):
         'form_data': form_data,
     }
     return render(request, 'dashboard/manage_units.html', context)
+
+
+@login_required
+def download_agent(request):
+    """
+    Download pre-configured agent installer with device-specific API token.
+    """
+    device_id = request.GET.get('device_id')
+    device = None
+    
+    if device_id:
+        device = get_object_or_404(Device, id=device_id)
+    
+    # Get server URL (auto-detect from request)
+    server_url = request.build_absolute_uri('/').rstrip('/')
+    
+    # Get all devices and tokens for dropdown
+    devices = Device.objects.order_by('name')
+    tokens = APIToken.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'device': device,
+        'devices': devices,
+        'tokens': tokens,
+        'server_url': server_url,
+    }
+    return render(request, 'dashboard/download_agent.html', context)
+
+
+@login_required
+def download_agent_package(request):
+    """
+    Generate and download a ZIP file containing agent files pre-configured.
+    """
+    device_id = request.GET.get('device_id')
+    api_token = request.GET.get('api_token')
+    
+    if not device_id or not api_token:
+        messages.error(request, 'Device and API token required.')
+        return redirect('dashboard:download_agent')
+    
+    device = get_object_or_404(Device, id=device_id)
+    
+    # Verify API token exists
+    token_exists = APIToken.objects.filter(token=api_token).exists()
+    if not token_exists:
+        messages.error(request, 'Invalid API token.')
+        return redirect('dashboard:download_agent')
+    
+    # Get server URL
+    server_url = request.build_absolute_uri('/').rstrip('/')
+    
+    # Agent directory
+    agent_dir = settings.BASE_DIR / 'agent'
+    
+    # Create in-memory ZIP
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Add all agent files
+        for filename in ['netwatch_agent.ps1', 'install_agent_task.ps1', 
+                        'INSTALL_AGENT.bat', 'UNINSTALL_AGENT.bat',
+                        'TEST_AGENT.bat', 'CHECK_STATUS.bat', 'README.md']:
+            file_path = agent_dir / filename
+            if file_path.exists():
+                zip_file.write(file_path, f'netwatch_agent/{filename}')
+        
+        # Generate pre-configured config file
+        config_content = f'''{{
+    "server_url": "{server_url}",
+    "device_id": {device.id},
+    "api_key": "{api_token}",
+    "check_interval": 60,
+    "processes": [
+        {{
+            "name": "ServiceHost",
+            "label": "ServiceHost (POS Program)",
+            "filter": "!-service"
+        }},
+        {{
+            "name": "ServiceHost",
+            "label": "ServiceHost (System Service)",
+            "filter": "-service"
+        }}
+    ],
+    "log_level": "INFO",
+    "log_file": "netwatch_agent.log"
+}}'''
+        
+        zip_file.writestr('netwatch_agent/agent_config.json', config_content)
+    
+    # Prepare response
+    zip_buffer.seek(0)
+    response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
+    response['Content-Disposition'] = f'attachment; filename="netwatch_agent_{device.name}.zip"'
+    
+    logger.info(f"Agent package downloaded for device {device.name} by {request.user.username}")
+    
+    return response

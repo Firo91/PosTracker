@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Download Agent - NetWatch{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h1 class="h2">
+            <i class="bi bi-download"></i> Download Agent Installer
+        </h1>
+        <p class="text-muted">Get a pre-configured agent to monitor this device</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Agent Configuration</h5>
+                
+                <form method="get" action="{% url 'dashboard:download_agent_package' %}" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="device_id" class="form-label">Select Device</label>
+                        <select name="device_id" id="device_id" class="form-select" required>
+                            <option value="">-- Choose Device --</option>
+                            {% for dev in devices %}
+                                <option value="{{ dev.id }}" {% if device and dev.id == device.id %}selected{% endif %}>
+                                    {{ dev.name }} ({{ dev.ip_address }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Select the device this agent will monitor</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="api_token" class="form-label">API Token</label>
+                        <select name="api_token" id="api_token" class="form-select" required>
+                            <option value="">-- Choose API Token --</option>
+                            {% for token in tokens %}
+                                <option value="{{ token.token }}">
+                                    {{ token.name }} {% if not token.is_active %}(Inactive){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">
+                            Don't have a token? <a href="{% url 'dashboard:manage_tokens' %}" target="_blank">Create one</a>
+                        </small>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>What's included:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>PowerShell agent script</li>
+                            <li>Installation scripts (batch files)</li>
+                            <li>Pre-configured config file with your server URL, device ID, and API token</li>
+                            <li>README with installation instructions</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-download"></i> Download Agent Package (ZIP)
+                        </button>
+                        <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h5 class="card-title">Installation Steps</h5>
+                <ol>
+                    <li>Download the ZIP package above</li>
+                    <li>Extract to a folder on the target Windows machine (e.g., <code>C:\NetWatch\agent</code>)</li>
+                    <li>Right-click <strong>INSTALL_AGENT.bat</strong> and select <strong>"Run as Administrator"</strong></li>
+                    <li>The agent will be installed as a scheduled task running every minute</li>
+                    <li>Check status by running <strong>CHECK_STATUS.bat</strong></li>
+                </ol>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Requirements:</strong> Windows Server or Windows 10/11 with PowerShell 5.1+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation
+(function() {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+</script>
+{% endblock %}

@@ -18,4 +18,6 @@ urlpatterns = [
     path('tokens/<int:token_id>/delete/', views.delete_api_token, name='delete_token'),
     path('tokens/<int:token_id>/toggle/', views.toggle_api_token, name='toggle_token'),
     path('device/<int:device_id>/edit/', views.edit_device, name='edit_device'),
+    path('download-agent/', views.download_agent, name='download_agent'),
+    path('download-agent/package/', views.download_agent_package, name='download_agent_package'),
 ]
