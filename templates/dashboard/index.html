@@ -187,14 +187,14 @@
                     </td>
                     <td>
                         {% with agent=device.agent_reports.first latest_ping=device.check_results.first %}
-                            {% if latest_ping and not latest_ping.ping_ok %}
-                                <span class="text-muted"><i class="bi bi-dash-circle"></i> Offline</span>
-                            {% elif agent %}
+                            {% if agent %}
                                 {% if agent.agent_healthy %}
-                                    <span class="check-indicator success"></span>Processes OK
+                                    <span class="check-indicator success"></span>Healthy
                                 {% else %}
-                                    <span class="check-indicator danger"></span>Process Error
+                                    <span class="check-indicator danger"></span>Unhealthy
                                 {% endif %}
+                            {% elif device.last_status == 'DOWN' %}
+                                <span class="text-muted"><i class="bi bi-dash-circle"></i> Offline</span>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
@@ -202,9 +202,7 @@
                     </td>
                     <td>
                         {% with agent=device.agent_reports.first latest_ping=device.check_results.first %}
-                            {% if latest_ping and not latest_ping.ping_ok %}
-                                <span class="text-muted text-decoration-line-through">Stale</span>
-                            {% elif agent and agent.processes_status %}
+                            {% if agent and agent.processes_status %}
                                 {% for name, proc in agent.processes_status.items %}
                                     {% if proc.running %}
                                         <span class="badge bg-success">{{ name }} (running)</span>
