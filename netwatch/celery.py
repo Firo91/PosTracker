@@ -2,6 +2,10 @@
 Celery configuration for netwatch project.
 """
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from celery import Celery
 from celery.schedules import crontab
 

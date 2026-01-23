@@ -1,6 +1,8 @@
 """
 Models for device inventory and credential management.
 """
+from datetime import timedelta
+from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -260,6 +262,8 @@ class Device(models.Model):
         Returns: 'UP', 'DEGRADED', 'DOWN', or 'UNKNOWN'
         """
         from apps.monitoring.models import CheckResult, AgentReport
+        freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
+        freshness_cutoff = timezone.now() - timedelta(minutes=freshness_minutes)
         
         # Get latest check result (ping)
         latest_check = self.check_results.first()
@@ -268,23 +272,29 @@ class Device(models.Model):
         # Get latest agent report
         latest_agent = self.agent_reports.first()
         agent_healthy = latest_agent.agent_healthy if latest_agent else None
+        agent_fresh = bool(latest_agent and latest_agent.reported_at >= freshness_cutoff)
         
         # Logic:
-        # - If ping fails → DOWN (can't reach device)
+        # - If ping fails but agent recently reports → treat as reachable (UP/DEGRADED)
+        # - If ping fails and no fresh agent → DOWN
         # - If ping OK but agent unhealthy → DEGRADED (reachable but services down)
         # - If ping OK and agent healthy → UP
-        # - If no data → UNKNOWN
+        # - If no data → UNKNOWN/agent-driven status
         
         if ping_ok is False:
+            if agent_fresh:
+                return 'DEGRADED' if agent_healthy is False else 'UP'
             return 'DOWN'
-        elif ping_ok is True:
+
+        if ping_ok is True:
             if agent_healthy is False:
                 return 'DEGRADED'
-            elif agent_healthy is True:
+            if agent_healthy is True:
                 return 'UP'
-            else:
-                # Ping up but no agent data yet
-                return 'UP'
-        else:
-            # No ping data
-            return 'UNKNOWN'
+            # Ping OK but no agent data yet
+            return 'UP'
+
+        # No ping data
+        if agent_fresh:
+            return 'DEGRADED' if agent_healthy is False else 'UP'
+        return 'UNKNOWN'

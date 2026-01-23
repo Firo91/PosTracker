@@ -3,8 +3,10 @@ Celery tasks for monitoring devices.
 """
 import logging
 import time
+from datetime import timedelta
 from typing import Optional
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q
 
@@ -64,6 +66,11 @@ def check_device(self, device_id: int):
     
     start_time = time.time()
     errors = []
+    freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
+    freshness_cutoff = timezone.now() - timedelta(minutes=freshness_minutes)
+    latest_agent = device.agent_reports.first()
+    agent_healthy = latest_agent.agent_healthy if latest_agent else None
+    agent_fresh = bool(latest_agent and latest_agent.reported_at >= freshness_cutoff)
     
     # Initialize check result
     check_result = CheckResult(device=device)
@@ -108,7 +115,20 @@ def check_device(self, device_id: int):
         
         # Record status change in history
         from apps.monitoring.models import StatusChangeHistory
-        reason = "Ping failed" if not check_result.ping_ok else "Service/process status changed"
+        if check_result.ping_ok is False:
+            if agent_fresh:
+                reason = "Ping failed but agent reporting; treating as reachable"
+            else:
+                reason = "Ping failed"
+        elif check_result.ping_ok is True:
+            if agent_healthy is False:
+                reason = "Agent reported unhealthy services/processes"
+            elif agent_healthy is True:
+                reason = "Ping OK and agent healthy"
+            else:
+                reason = "Ping OK"
+        else:
+            reason = "Using latest agent report" if agent_fresh else "No recent data"
         StatusChangeHistory.objects.create(
             device=device,
             old_status=old_status,
