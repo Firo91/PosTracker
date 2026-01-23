@@ -9,7 +9,7 @@ from django.utils import timezone
 import json
 
 from apps.inventory.models import Device, APIToken
-from apps.monitoring.models import AgentReport
+from apps.monitoring.models import AgentReport, StatusChangeHistory
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,21 @@ def agent_report(request):
         # Update device last agent report time
         device.last_agent_report = timezone.now()
         device.save(update_fields=['last_agent_report'])
+
+        # Update device status immediately using fresh agent data
+        old_status = device.last_status
+        new_status = device.compute_overall_status()
+        if new_status != old_status:
+            device.last_status = new_status
+            device.last_status_change = timezone.now()
+            device.save(update_fields=['last_status', 'last_status_change'])
+
+            StatusChangeHistory.objects.create(
+                device=device,
+                old_status=old_status,
+                new_status=new_status,
+                reason="Agent report updated status"
+            )
         
         logger.info(f"Agent report received from {device.name} (ID: {device_id}) - Token: {api_token.name}")
         
