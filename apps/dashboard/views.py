@@ -531,7 +531,7 @@ def download_agent(request):
     
     # Get all devices and tokens for dropdown
     devices = Device.objects.order_by('name')
-    tokens = APIToken.objects.filter(is_active=True).order_by('name')
+    tokens = APIToken.objects.filter(enabled=True).order_by('name')
     
     context = {
         'device': device,
