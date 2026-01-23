@@ -133,16 +133,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Celery Configuration
 # Celery/Redis configuration with Heroku rediss:// support
-def _maybe_add_ssl_params(url: str) -> str:
+def _format_redis_url(url: str) -> str:
+    """Add ssl_cert_reqs to rediss:// URLs if missing (for Heroku Redis)."""
     if not url:
         return url
     if url.startswith('rediss://') and 'ssl_cert_reqs' not in url:
+        # Append ssl_cert_reqs=CERT_NONE to avoid SSL verification issues
         separator = '&' if '?' in url else '?'
-        return f"{url}{separator}ssl_cert_reqs=none"
+        url = f"{url}{separator}ssl_cert_reqs=CERT_NONE"
     return url
 
-CELERY_BROKER_URL = _maybe_add_ssl_params(os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0'))
-CELERY_RESULT_BACKEND = _maybe_add_ssl_params(os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0'))
+_broker_url = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+_result_backend = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+
+CELERY_BROKER_URL = _format_redis_url(_broker_url)
+CELERY_RESULT_BACKEND = _format_redis_url(_result_backend)
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
