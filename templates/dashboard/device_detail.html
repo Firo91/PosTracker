@@ -330,10 +330,10 @@
 </div>
 {% endif %}
 
-<!-- Check History -->
-<div class="card">
+<!-- Ping Check History -->
+<div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Check History</h5>
+        <h5 class="mb-0"><i class="bi bi-activity"></i> Ping Check History</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -343,51 +343,127 @@
                         <th>Time</th>
                         <th>Status</th>
                         <th>Ping</th>
-                        <th>Agent</th>
                         <th>Duration</th>
                         <th>Errors</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in recent_results %}
+                    {% for result in recent_results %}
                     <tr>
                         <td>
-                            <small>{{ item.result.created_at|date:"Y-m-d H:i:s" }}</small>
+                            <small>{{ result.created_at|date:"Y-m-d H:i:s" }}</small>
                         </td>
                         <td>
-                            <span class="badge bg-{% if item.result.overall_status == 'UP' %}success{% elif item.result.overall_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
-                                {{ item.result.overall_status }}
+                            <span class="badge bg-{% if result.overall_status == 'UP' %}success{% elif result.overall_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
+                                {{ result.overall_status }}
                             </span>
                         </td>
                         <td>
-                            {% if item.result.ping_ok %}
-                                <span class="text-success">✓ {{ item.result.ping_ms }}ms</span>
+                            {% if result.ping_ok %}
+                                <span class="text-success">✓ {{ result.ping_ms }}ms</span>
                             {% else %}
                                 <span class="text-danger">✗</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if item.agent_report %}
-                                {% if item.agent_report.agent_healthy %}
-                                    <span class="text-success" title="Agent healthy at {{ item.agent_report.reported_at|date:'Y-m-d H:i:s' }}">✓</span>
-                                {% else %}
-                                    <span class="text-danger" title="Agent unhealthy at {{ item.agent_report.reported_at|date:'Y-m-d H:i:s' }}">✗</span>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-muted" title="No agent report">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if item.result.check_duration_ms %}
-                                {{ item.result.check_duration_ms }}ms
+                            {% if result.check_duration_ms %}
+                                {{ result.check_duration_ms }}ms
                             {% else %}
                                 —
                             {% endif %}
                         </td>
                         <td>
-                            {% if item.result.error_message %}
-                                <small class="text-danger" title="{{ item.result.error_message }}">
-                                    {{ item.result.error_message|truncatewords:5 }}
+                            {% if result.error_message %}
+                                <small class="text-danger" title="{{ result.error_message }}">
+                                    {{ result.error_message|truncatewords:5 }}
+                                </small>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            No ping check results in the selected time range.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Check History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-laptop"></i> Agent Check History</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>CPU</th>
+                        <th>Memory</th>
+                        <th>Disk</th>
+                        <th>Processes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for report in recent_agent_reports %}
+                    <tr>
+                        <td>
+                            <small>{{ report.reported_at|date:"Y-m-d H:i:s" }}</small>
+                        </td>
+                        <td>
+                            {% if report.agent_healthy %}
+                                <span class="badge bg-success">Healthy</span>
+                            {% else %}
+                                <span class="badge bg-danger">Unhealthy</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if report.cpu_percent %}
+                                <span class="{% if report.cpu_percent > 85 %}text-danger{% elif report.cpu_percent > 70 %}text-warning{% endif %}">
+                                    {{ report.cpu_percent|floatformat:0 }}%
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if report.memory_percent %}
+                                <span class="{% if report.memory_percent > 90 %}text-danger{% elif report.memory_percent > 75 %}text-warning{% endif %}">
+                                    {{ report.memory_percent|floatformat:0 }}%
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if report.disk_percent %}
+                                <span class="{% if report.disk_percent > 90 %}text-danger{% elif report.disk_percent > 75 %}text-warning{% endif %}">
+                                    {{ report.disk_percent|floatformat:0 }}%
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if report.processes_status %}
+                                <small>
+                                    {% for name, status in report.processes_status.items %}
+                                        {% if status.running %}
+                                            <span class="text-success">✓</span>
+                                        {% else %}
+                                            <span class="text-danger">✗</span>
+                                        {% endif %}
+                                        {{ name|truncatewords:2 }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
                                 </small>
                             {% else %}
                                 —
@@ -397,7 +473,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="6" class="text-center text-muted">
-                            No check results in the selected time range.
+                            No agent reports in the selected time range.
                         </td>
                     </tr>
                     {% endfor %}

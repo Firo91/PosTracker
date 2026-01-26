@@ -157,8 +157,8 @@ def device_detail_view(request, device_id):
         'avg_ping_ms': avg_ping,
     }
 
-    # Get latest result for quick status and limit to 100 most recent
-    latest_result = recent_results[:100].first()
+    # Get latest result for quick status
+    latest_result = recent_results.first()
     
     # Get latest agent report for system metrics
     latest_agent_report = device.agent_reports.first()
@@ -169,21 +169,15 @@ def device_detail_view(request, device_id):
     # Get agent status change history (last 10 changes)
     agent_status_changes = device.agent_status_history.all()[:10]
     
-    # Annotate check results with agent status at that time
-    # For each check result, find the most recent agent report before or at that time
-    results_with_agent = []
-    for result in recent_results[:100]:
-        agent_report = device.agent_reports.filter(
-            reported_at__lte=result.created_at
-        ).first()
-        results_with_agent.append({
-            'result': result,
-            'agent_report': agent_report
-        })
+    # Get recent agent reports separately (last 100)
+    recent_agent_reports = device.agent_reports.filter(
+        reported_at__gte=since
+    ).order_by('-reported_at')[:100]
 
     context = {
         'device': device,
-        'recent_results': results_with_agent,
+        'recent_results': recent_results[:100],
+        'recent_agent_reports': recent_agent_reports,
         'latest_result': latest_result,
         'latest_agent_report': latest_agent_report,
         'statistics': statistics,
