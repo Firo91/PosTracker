@@ -256,7 +256,7 @@
 {% if status_changes %}
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Recent Status Changes</h5>
+        <h5 class="mb-0">Recent Status Changes (Ping)</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -291,6 +291,45 @@
 </div>
 {% endif %}
 
+<!-- Agent Status Change History -->
+{% if agent_status_changes %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Agent Status Changes</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Change</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for change in agent_status_changes %}
+                    <tr>
+                        <td><small>{{ change.changed_at|date:"Y-m-d H:i:s" }}</small></td>
+                        <td>
+                            <span class="badge bg-{% if change.old_status %}success{% else %}danger{% endif %}">
+                                {% if change.old_status %}Healthy{% else %}Unhealthy{% endif %}
+                            </span>
+                            → 
+                            <span class="badge bg-{% if change.new_status %}success{% else %}danger{% endif %}">
+                                {% if change.new_status %}Healthy{% else %}Unhealthy{% endif %}
+                            </span>
+                        </td>
+                        <td><small>{{ change.reason }}</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Check History -->
 <div class="card">
     <div class="card-header">
@@ -304,39 +343,51 @@
                         <th>Time</th>
                         <th>Status</th>
                         <th>Ping</th>
+                        <th>Agent</th>
                         <th>Duration</th>
                         <th>Errors</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for result in recent_results %}
+                    {% for item in recent_results %}
                     <tr>
                         <td>
-                            <small>{{ result.created_at|date:"Y-m-d H:i:s" }}</small>
+                            <small>{{ item.result.created_at|date:"Y-m-d H:i:s" }}</small>
                         </td>
                         <td>
-                            <span class="badge bg-{% if result.overall_status == 'UP' %}success{% elif result.overall_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
-                                {{ result.overall_status }}
+                            <span class="badge bg-{% if item.result.overall_status == 'UP' %}success{% elif item.result.overall_status == 'DEGRADED' %}warning{% else %}danger{% endif %}">
+                                {{ item.result.overall_status }}
                             </span>
                         </td>
                         <td>
-                            {% if result.ping_ok %}
-                                <span class="text-success">✓ {{ result.ping_ms }}ms</span>
+                            {% if item.result.ping_ok %}
+                                <span class="text-success">✓ {{ item.result.ping_ms }}ms</span>
                             {% else %}
                                 <span class="text-danger">✗</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if result.check_duration_ms %}
-                                {{ result.check_duration_ms }}ms
+                            {% if item.agent_report %}
+                                {% if item.agent_report.agent_healthy %}
+                                    <span class="text-success" title="Agent healthy at {{ item.agent_report.reported_at|date:'Y-m-d H:i:s' }}">✓</span>
+                                {% else %}
+                                    <span class="text-danger" title="Agent unhealthy at {{ item.agent_report.reported_at|date:'Y-m-d H:i:s' }}">✗</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted" title="No agent report">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.result.check_duration_ms %}
+                                {{ item.result.check_duration_ms }}ms
                             {% else %}
                                 —
                             {% endif %}
                         </td>
                         <td>
-                            {% if result.error_message %}
-                                <small class="text-danger" title="{{ result.error_message }}">
-                                    {{ result.error_message|truncatewords:5 }}
+                            {% if item.result.error_message %}
+                                <small class="text-danger" title="{{ item.result.error_message }}">
+                                    {{ item.result.error_message|truncatewords:5 }}
                                 </small>
                             {% else %}
                                 —
@@ -345,7 +396,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted">
+                        <td colspan="6" class="text-center text-muted">
                             No check results in the selected time range.
                         </td>
                     </tr>

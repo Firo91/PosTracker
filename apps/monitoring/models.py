@@ -49,6 +49,49 @@ class StatusChangeHistory(models.Model):
         return f"{self.device.name}: {self.old_status} → {self.new_status} at {self.changed_at}"
 
 
+class AgentStatusHistory(models.Model):
+    """
+    Track when agent health status changes.
+    Useful for identifying when the agent or monitored services go down/up.
+    """
+    device = models.ForeignKey(
+        Device,
+        on_delete=models.CASCADE,
+        related_name='agent_status_history'
+    )
+    
+    old_status = models.BooleanField(
+        help_text="Previous agent health status (True=healthy, False=unhealthy)"
+    )
+    new_status = models.BooleanField(
+        help_text="New agent health status (True=healthy, False=unhealthy)"
+    )
+    
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the agent status change occurred"
+    )
+    
+    reason = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Why the agent status changed (e.g., service stopped, agent recovered)"
+    )
+    
+    class Meta:
+        ordering = ['-changed_at']
+        indexes = [
+            models.Index(fields=['device', '-changed_at']),
+        ]
+        verbose_name_plural = "Agent status histories"
+    
+    def __str__(self):
+        old_text = "Healthy" if self.old_status else "Unhealthy"
+        new_text = "Healthy" if self.new_status else "Unhealthy"
+        return f"{self.device.name} Agent: {old_text} → {new_text} at {self.changed_at}"
+
+
 class AgentReport(models.Model):
     """Store status reports from agents running on devices."""
     

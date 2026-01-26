@@ -9,7 +9,7 @@ from django.utils import timezone
 import json
 
 from apps.inventory.models import Device, APIToken
-from apps.monitoring.models import AgentReport, StatusChangeHistory
+from apps.monitoring.models import AgentReport, StatusChangeHistory, AgentStatusHistory
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +103,39 @@ def agent_report(request):
         )
         
         # Determine health (check all processes running)
+        old_agent_status = None
+        
+        # Get the previous agent status from the most recent report
+        previous_report = device.agent_reports.exclude(id=report.id).first()
+        if previous_report:
+            old_agent_status = previous_report.agent_healthy
+        
         report.agent_healthy = report.determine_health()
         report.save()
+        
+        # Track agent status changes
+        if old_agent_status is not None and old_agent_status != report.agent_healthy:
+            # Build reason string based on what changed
+            reason = "Agent health status changed"
+            if not report.agent_healthy:
+                # Agent became unhealthy - list what failed
+                failed_items = []
+                for name, status in report.processes_status.items():
+                    if status.get('found', True) and not status.get('running', False):
+                        failed_items.append(name)
+                if failed_items:
+                    reason = f"Services/processes not running: {', '.join(failed_items)}"
+            else:
+                # Agent recovered
+                reason = "All monitored services/processes recovered"
+            
+            AgentStatusHistory.objects.create(
+                device=device,
+                old_status=old_agent_status,
+                new_status=report.agent_healthy,
+                reason=reason
+            )
+            logger.info(f"Agent status changed for {device.name}: {old_agent_status} -> {report.agent_healthy}")
         
         # Update device last agent report time
         device.last_agent_report = timezone.now()

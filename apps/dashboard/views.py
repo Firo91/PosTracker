@@ -16,7 +16,7 @@ from django.views.decorators.http import require_http_methods
 from django.conf import settings
 
 from apps.inventory.models import Device, APIToken, Unit
-from apps.monitoring.models import CheckResult, AgentReport, StatusChangeHistory
+from apps.monitoring.models import CheckResult, AgentReport, StatusChangeHistory, AgentStatusHistory
 from apps.accounts.models import UserProfile
 
 logger = logging.getLogger(__name__)
@@ -165,15 +165,31 @@ def device_detail_view(request, device_id):
     
     # Get status change history (last 10 changes)
     status_changes = device.status_history.all()[:10]
+    
+    # Get agent status change history (last 10 changes)
+    agent_status_changes = device.agent_status_history.all()[:10]
+    
+    # Annotate check results with agent status at that time
+    # For each check result, find the most recent agent report before or at that time
+    results_with_agent = []
+    for result in recent_results[:100]:
+        agent_report = device.agent_reports.filter(
+            reported_at__lte=result.created_at
+        ).first()
+        results_with_agent.append({
+            'result': result,
+            'agent_report': agent_report
+        })
 
     context = {
         'device': device,
-        'recent_results': recent_results,
+        'recent_results': results_with_agent,
         'latest_result': latest_result,
         'latest_agent_report': latest_agent_report,
         'statistics': statistics,
         'hours': hours,
         'status_changes': status_changes,
+        'agent_status_changes': agent_status_changes,
     }
 
     return render(request, 'dashboard/device_detail.html', context)
