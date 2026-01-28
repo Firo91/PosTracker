@@ -99,6 +99,9 @@ def check_device(self, device_id: int):
     # Save check result
     check_result.save()
     
+    # Check for alerts and send to ChatWarning
+    _check_and_send_alerts(device, latest_agent)
+    
     # Update device status if thresholds are met
     old_status = device.last_status
     
@@ -206,3 +209,106 @@ def cleanup_old_data():
             f"Data retention: deleted {check_results_deleted} check results "
             f"and {agent_reports_deleted} agent reports older than {cutoff_date}"
         )
+
+def _check_and_send_alerts(device: Device, agent_report=None):
+    """
+    Check device metrics against thresholds and send alerts to ChatWarning if needed.
+    
+    Alerts for:
+    - Process down (monitored services/processes not running)
+    - CPU usage too high
+    - Memory usage too high
+    - Disk usage too high
+    - Device uptime exceeds threshold (recommends reboot)
+    
+    Args:
+        device: Device object to check
+        agent_report: Latest AgentReport for the device (optional)
+    """
+    # Skip if no agent report or alert integration not configured
+    if not agent_report:
+        return
+    
+    # Try to import integration, silently fail if requests not available
+    try:
+        from postracker_integration import (
+            send_process_alert,
+            send_cpu_alert,
+            send_memory_alert,
+            send_storage_alert,
+            send_uptime_alert
+        )
+    except ImportError:
+        logger.warning("postracker_integration not available. Install requests package.")
+        return
+    
+    alert_cpu_threshold = getattr(settings, 'ALERT_CPU_THRESHOLD', 85)
+    alert_memory_threshold = getattr(settings, 'ALERT_MEMORY_THRESHOLD', 85)
+    alert_disk_threshold = getattr(settings, 'ALERT_DISK_THRESHOLD', 90)
+    alert_uptime_threshold_days = getattr(settings, 'ALERT_UPTIME_THRESHOLD_DAYS', 30)
+    alert_uptime_threshold_hours = alert_uptime_threshold_days * 24
+    
+    try:
+        # Check for process/service alerts
+        if not agent_report.agent_healthy:
+            # Device has unhealthy services/processes
+            for service_name, service_info in agent_report.services_status.items():
+                if service_info.get('found', True) and not service_info.get('running', False):
+                    logger.warning(f"Sending process alert for {device.name}: {service_name} down")
+                    send_process_alert(
+                        device_name=device.name,
+                        process_name=service_name,
+                        channel_name='alerts'
+                    )
+            
+            for process_name, process_info in agent_report.processes_status.items():
+                if not process_info.get('running', False):
+                    logger.warning(f"Sending process alert for {device.name}: {process_name} down")
+                    send_process_alert(
+                        device_name=device.name,
+                        process_name=process_name,
+                        channel_name='alerts'
+                    )
+        
+        # Check CPU usage
+        if agent_report.cpu_percent and agent_report.cpu_percent > alert_cpu_threshold:
+            logger.warning(f"Sending CPU alert for {device.name}: {agent_report.cpu_percent}%")
+            send_cpu_alert(
+                device_name=device.name,
+                cpu_percent=agent_report.cpu_percent,
+                threshold=alert_cpu_threshold,
+                channel_name='alerts'
+            )
+        
+        # Check memory usage
+        if agent_report.memory_percent and agent_report.memory_percent > alert_memory_threshold:
+            logger.warning(f"Sending memory alert for {device.name}: {agent_report.memory_percent}%")
+            send_memory_alert(
+                device_name=device.name,
+                memory_percent=agent_report.memory_percent,
+                threshold=alert_memory_threshold,
+                channel_name='alerts'
+            )
+        
+        # Check disk usage
+        if agent_report.disk_percent and agent_report.disk_percent > alert_disk_threshold:
+            logger.warning(f"Sending disk alert for {device.name}: {agent_report.disk_percent}%")
+            send_storage_alert(
+                device_name=device.name,
+                disk_percent=agent_report.disk_percent,
+                threshold=alert_disk_threshold,
+                channel_name='alerts'
+            )
+        
+        # Check uptime (recommend reboot after N days)
+        if agent_report.uptime_hours and agent_report.uptime_hours > alert_uptime_threshold_hours:
+            logger.info(f"Sending uptime alert for {device.name}: {agent_report.uptime_hours / 24:.1f} days")
+            send_uptime_alert(
+                device_name=device.name,
+                uptime_hours=agent_report.uptime_hours,
+                threshold_days=alert_uptime_threshold_days,
+                channel_name='alerts'
+            )
+    
+    except Exception as e:
+        logger.error(f"Error checking/sending alerts for {device.name}: {e}", exc_info=True)

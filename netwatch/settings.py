@@ -180,6 +180,31 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'netwatch@example.com')
 ALERT_EMAIL_RECIPIENTS = os.getenv('ALERT_EMAIL_RECIPIENTS', '').split(',')
 
+# ChatWarning Integration Configuration
+# Set these environment variables on Heroku:
+# heroku config:set ALERT_CHAT_BASE_URL='https://chatwarning.herokuapp.com'
+# heroku config:set ALERT_CHAT_USER='admin'
+# heroku config:set ALERT_CHAT_PASS='your-password'
+ALERT_CHAT_BASE_URL = os.getenv('ALERT_CHAT_BASE_URL', '')
+ALERT_CHAT_USER = os.getenv('ALERT_CHAT_USER', '')
+ALERT_CHAT_PASS = os.getenv('ALERT_CHAT_PASS', '')
+
+# Alert Thresholds for Device Monitoring
+# CPU usage threshold (percentage) - alert when exceeded
+ALERT_CPU_THRESHOLD = float(os.getenv('ALERT_CPU_THRESHOLD', '85'))
+
+# Memory/RAM usage threshold (percentage) - alert when exceeded
+ALERT_MEMORY_THRESHOLD = float(os.getenv('ALERT_MEMORY_THRESHOLD', '85'))
+
+# Disk/Storage usage threshold (percentage) - alert when exceeded
+ALERT_DISK_THRESHOLD = float(os.getenv('ALERT_DISK_THRESHOLD', '90'))
+
+# Device uptime threshold (days) - alert when exceeded (to remind reboot)
+ALERT_UPTIME_THRESHOLD_DAYS = int(os.getenv('ALERT_UPTIME_THRESHOLD_DAYS', '30'))
+
+# Agent freshness for status determination (minutes)
+AGENT_FRESH_MINUTES = int(os.getenv('AGENT_FRESH_MINUTES', '10'))
+
 # Logging
 LOGGING = {
     'version': 1,

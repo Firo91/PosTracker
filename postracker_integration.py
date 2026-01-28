@@ -1,0 +1,350 @@
+"""
+PosTracker + ChatWarning Integration Module
+
+Provides easy API to send alerts from PosTracker monitoring to ChatWarning
+for real-time alert notifications.
+"""
+import os
+import logging
+import json
+import requests
+from typing import Optional, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+
+class ChatWarningIntegration:
+    """
+    Integration with ChatWarning for sending alerts.
+    
+    Requires environment variables:
+    - ALERT_CHAT_BASE_URL: Base URL of ChatWarning (e.g., https://chatwarning.herokuapp.com)
+    - ALERT_CHAT_USER: Admin username
+    - ALERT_CHAT_PASS: Admin password
+    """
+    
+    def __init__(self):
+        self.base_url = os.getenv('ALERT_CHAT_BASE_URL', '').rstrip('/')
+        self.username = os.getenv('ALERT_CHAT_USER', '')
+        self.password = os.getenv('ALERT_CHAT_PASS', '')
+        self.timeout = 10  # seconds
+        
+        if not all([self.base_url, self.username, self.password]):
+            logger.warning(
+                "ChatWarning integration not configured. "
+                "Set ALERT_CHAT_BASE_URL, ALERT_CHAT_USER, ALERT_CHAT_PASS environment variables."
+            )
+    
+    def is_configured(self) -> bool:
+        """Check if integration is properly configured."""
+        return bool(self.base_url and self.username and self.password)
+    
+    def send_alert(
+        self,
+        device_name: str,
+        status: str,
+        alert_type: str,
+        message: str,
+        channel_name: str = 'alerts',
+        previous_status: Optional[str] = None,
+        severity: str = 'info'
+    ) -> bool:
+        """
+        Send an alert to ChatWarning.
+        
+        Args:
+            device_name: Name of the device
+            status: Current status (UP, DOWN, DEGRADED, WARNING)
+            alert_type: Type of alert (STATUS_CHANGE, PROCESS_DOWN, CPU_HIGH, RAM_HIGH, STORAGE_HIGH, UPTIME_LONG)
+            message: Detailed alert message
+            channel_name: Target channel in ChatWarning (default: 'alerts')
+            previous_status: Previous status (for status changes)
+            severity: Alert severity (info, warning, critical)
+            
+        Returns:
+            True if alert sent successfully, False otherwise
+        """
+        if not self.is_configured():
+            logger.warning("ChatWarning not configured. Alert not sent.")
+            return False
+        
+        try:
+            # Prepare alert payload
+            alert_payload = {
+                'device_name': device_name,
+                'status': status,
+                'alert_type': alert_type,
+                'message': message,
+                'severity': severity,
+                'channel_name': channel_name,
+            }
+            
+            if previous_status:
+                alert_payload['previous_status'] = previous_status
+            
+            # Build API endpoint
+            endpoint = f"{self.base_url}/api/alerts/send/"
+            
+            # Send request with auth
+            response = requests.post(
+                endpoint,
+                json=alert_payload,
+                auth=(self.username, self.password),
+                timeout=self.timeout
+            )
+            
+            # Check response
+            if response.status_code in [200, 201]:
+                logger.info(
+                    f"Alert sent to ChatWarning: {device_name} - {alert_type} "
+                    f"(channel: {channel_name})"
+                )
+                return True
+            else:
+                logger.error(
+                    f"Failed to send alert to ChatWarning. "
+                    f"Status: {response.status_code}, Response: {response.text}"
+                )
+                return False
+        
+        except requests.exceptions.Timeout:
+            logger.error(
+                f"Timeout connecting to ChatWarning ({self.base_url}). "
+                f"Alert not sent for {device_name}"
+            )
+            return False
+        except requests.exceptions.ConnectionError as e:
+            logger.error(
+                f"Connection error to ChatWarning ({self.base_url}): {e}. "
+                f"Alert not sent for {device_name}"
+            )
+            return False
+        except Exception as e:
+            logger.error(
+                f"Unexpected error sending alert to ChatWarning: {e}",
+                exc_info=True
+            )
+            return False
+
+
+# Global integration instance
+_integration = ChatWarningIntegration()
+
+
+def send_device_alert(
+    device_name: str,
+    status: str,
+    alert_type: str,
+    message: str,
+    channel_name: str = 'alerts',
+    previous_status: Optional[str] = None,
+    severity: str = 'info'
+) -> bool:
+    """
+    Send a device alert to ChatWarning.
+    
+    Convenience function wrapping ChatWarningIntegration.send_alert()
+    
+    Args:
+        device_name: Name of the device
+        status: Current status (UP, DOWN, DEGRADED, WARNING)
+        alert_type: Type of alert (STATUS_CHANGE, PROCESS_DOWN, CPU_HIGH, RAM_HIGH, STORAGE_HIGH, UPTIME_LONG)
+        message: Detailed alert message
+        channel_name: Target channel in ChatWarning (default: 'alerts')
+        previous_status: Previous status (for status changes)
+        severity: Alert severity (info, warning, critical)
+        
+    Returns:
+        True if alert sent successfully, False otherwise
+    """
+    return _integration.send_alert(
+        device_name=device_name,
+        status=status,
+        alert_type=alert_type,
+        message=message,
+        channel_name=channel_name,
+        previous_status=previous_status,
+        severity=severity
+    )
+
+
+def send_process_alert(
+    device_name: str,
+    process_name: str,
+    channel_name: str = 'alerts'
+) -> bool:
+    """
+    Send a process down alert.
+    
+    Args:
+        device_name: Name of the device
+        process_name: Name of the process that went down
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    return send_device_alert(
+        device_name=device_name,
+        status='DOWN',
+        alert_type='PROCESS_DOWN',
+        message=f'Process "{process_name}" is not running',
+        channel_name=channel_name,
+        severity='critical'
+    )
+
+
+def send_cpu_alert(
+    device_name: str,
+    cpu_percent: float,
+    threshold: float = 80.0,
+    channel_name: str = 'alerts'
+) -> bool:
+    """
+    Send a high CPU alert.
+    
+    Args:
+        device_name: Name of the device
+        cpu_percent: Current CPU percentage
+        threshold: CPU threshold that was exceeded
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    return send_device_alert(
+        device_name=device_name,
+        status='WARNING',
+        alert_type='CPU_HIGH',
+        message=f'CPU usage is {cpu_percent:.1f}% (threshold: {threshold:.1f}%)',
+        channel_name=channel_name,
+        severity='warning'
+    )
+
+
+def send_memory_alert(
+    device_name: str,
+    memory_percent: float,
+    threshold: float = 80.0,
+    channel_name: str = 'alerts'
+) -> bool:
+    """
+    Send a high memory/RAM alert.
+    
+    Args:
+        device_name: Name of the device
+        memory_percent: Current memory percentage
+        threshold: Memory threshold that was exceeded
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    return send_device_alert(
+        device_name=device_name,
+        status='WARNING',
+        alert_type='RAM_HIGH',
+        message=f'Memory usage is {memory_percent:.1f}% (threshold: {threshold:.1f}%)',
+        channel_name=channel_name,
+        severity='warning'
+    )
+
+
+def send_storage_alert(
+    device_name: str,
+    disk_percent: float,
+    threshold: float = 90.0,
+    channel_name: str = 'alerts'
+) -> bool:
+    """
+    Send a high storage/disk alert.
+    
+    Args:
+        device_name: Name of the device
+        disk_percent: Current disk usage percentage
+        threshold: Disk threshold that was exceeded
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    return send_device_alert(
+        device_name=device_name,
+        status='WARNING',
+        alert_type='STORAGE_HIGH',
+        message=f'Storage usage is {disk_percent:.1f}% (threshold: {threshold:.1f}%)',
+        channel_name=channel_name,
+        severity='warning'
+    )
+
+
+def send_uptime_alert(
+    device_name: str,
+    uptime_hours: float,
+    threshold_days: int = 30,
+    channel_name: str = 'alerts'
+) -> bool:
+    """
+    Send an alert for device running longer than threshold.
+    
+    Args:
+        device_name: Name of the device
+        uptime_hours: Current uptime in hours
+        threshold_days: Uptime threshold in days
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    uptime_days = uptime_hours / 24
+    return send_device_alert(
+        device_name=device_name,
+        status='WARNING',
+        alert_type='UPTIME_LONG',
+        message=f'Device has been running for {uptime_days:.1f} days (threshold: {threshold_days} days). Consider reboot.',
+        channel_name=channel_name,
+        severity='info'
+    )
+
+
+def send_status_change_alert(
+    device_name: str,
+    old_status: str,
+    new_status: str,
+    reason: str = '',
+    channel_name: str = 'server-monitoring'
+) -> bool:
+    """
+    Send a device status change alert.
+    
+    Args:
+        device_name: Name of the device
+        old_status: Previous status
+        new_status: New status
+        reason: Reason for status change
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    # Determine severity based on new status
+    if new_status == 'DOWN':
+        severity = 'critical'
+    elif new_status == 'DEGRADED':
+        severity = 'warning'
+    else:  # UP
+        severity = 'info'
+    
+    message = f"Device status changed from {old_status} to {new_status}"
+    if reason:
+        message += f". Reason: {reason}"
+    
+    return send_device_alert(
+        device_name=device_name,
+        status=new_status,
+        alert_type='STATUS_CHANGE',
+        message=message,
+        channel_name=channel_name,
+        previous_status=old_status,
+        severity=severity
+    )
