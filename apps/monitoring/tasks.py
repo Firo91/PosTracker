@@ -141,7 +141,9 @@ def check_device(self, device_id: int):
         logger.info(f"Device {device.name} status changed: {old_status} → {new_status}")
 
         # Send status alert based on configured mode
-        if getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', False):
+        alert_once_mode = getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', False)
+        logger.info(f"Alert mode check: ALERT_STATUS_ALERT_ONCE_PER_STATUS={alert_once_mode}")
+        if alert_once_mode:
             _send_status_once_per_status(device, new_status, reason)
         else:
             _send_status_change_alert(device, old_status, new_status, reason)
@@ -149,7 +151,9 @@ def check_device(self, device_id: int):
         device.save(update_fields=['last_check_at'])
 
         # If enabled, send a status alert once per status even without changes
-        if getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', False):
+        alert_once_mode = getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', False)
+        if alert_once_mode:
+            logger.info(f"Checking once-per-status alert for {device.name} (current status: {new_status})")
             _send_status_once_per_status(device, new_status, reason)
 
     # Optional: send a status update alert on every check
@@ -359,11 +363,12 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
     """
     Send a status alert only once per status value (until it changes).
     """
+    logger.info(f"_send_status_once_per_status called for {device.name}, status={status}")
     try:
         from postracker_integration import send_device_alert
         from apps.monitoring.models import AlertLog
-    except ImportError:
-        logger.warning("postracker_integration not available. Install requests package.")
+    except ImportError as e:
+        logger.warning(f"postracker_integration not available: {e}")
         return
 
     last_alert = AlertLog.objects.filter(
@@ -372,31 +377,38 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
     ).order_by('-sent_at').first()
 
     if last_alert and last_alert.new_status == status:
+        logger.info(f"Alert already sent for {device.name} with status {status}, skipping")
         return
 
+    logger.info(f"Sending alert for {device.name}: {status}")
     message = f"Device status update: {status}"
     if reason:
         message += f". Reason: {reason}"
 
     try:
+        channel_name = 'alerts'
         sent = send_device_alert(
             device_name=device.name,
             status=status,
             alert_type='STATUS_CHANGE',
             message=message,
-            channel_name='alerts',
+            channel_name=channel_name,
             previous_status=last_alert.new_status if last_alert else '',
             severity='warning' if status == 'DEGRADED' else 'info'
         )
 
-        if sent:
-            AlertLog.objects.create(
-                device=device,
-                alert_type='STATUS_CHANGE',
-                old_status=last_alert.new_status if last_alert else '',
-                new_status=status,
-                message=message
-            )
+        logger.info(f"Alert send result for {device.name}: {sent}")
+
+        AlertLog.objects.create(
+            device=device,
+            alert_type='STATUS_CHANGE',
+            old_status=last_alert.new_status if last_alert else '',
+            new_status=status,
+            message=message,
+            recipients=channel_name,
+            success=sent,
+            error='' if sent else 'ChatWarning send returned false'
+        )
     except Exception as exc:
         logger.error(
             f"Error sending status update alert for {device.name}: {exc}",
