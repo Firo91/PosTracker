@@ -69,23 +69,49 @@ class ChatWarningIntegration:
             return False
         
         try:
-            # Prepare alert payload
+            # First, get the channel ID by querying /api/chat/channels/
+            try:
+                channels_response = requests.get(
+                    f"{self.base_url}/api/chat/channels/",
+                    auth=(self.username, self.password),
+                    timeout=self.timeout
+                )
+                channels_response.raise_for_status()
+                channels = channels_response.json()
+                
+                # Find channel by name
+                channel_id = None
+                for ch in channels:
+                    if ch['name'] == channel_name:
+                        channel_id = ch['id']
+                        break
+                
+                if not channel_id:
+                    logger.error(f"Channel '{channel_name}' not found in ChatWarning")
+                    return False
+                    
+            except Exception as e:
+                logger.error(f"Failed to fetch channels from ChatWarning: {e}")
+                return False
+            
+            # Build alert title - show status transition if applicable
+            if previous_status and previous_status != status:
+                title = f"{device_name}: {previous_status} → {status}"
+            else:
+                title = f"{device_name}: {status}"
+            
+            # Prepare alert payload for ChatWarning API
             alert_payload = {
-                'device_name': device_name,
-                'status': status,
-                'alert_type': alert_type,
-                'message': message,
+                'channel': channel_id,
+                'app_name': 'postracker',
                 'severity': severity,
-                'channel_name': channel_name,
+                'title': title,
+                'description': message
             }
             
-            if previous_status:
-                alert_payload['previous_status'] = previous_status
+            # Send to ChatWarning alerts endpoint
+            endpoint = f"{self.base_url}/api/chat/alerts/"
             
-            # Build API endpoint
-            endpoint = f"{self.base_url}/api/alerts/send/"
-            
-            # Send request with auth
             response = requests.post(
                 endpoint,
                 json=alert_payload,
