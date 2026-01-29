@@ -131,6 +131,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Cache Configuration for local development
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
 # Celery Configuration
 # Celery/Redis configuration with Heroku rediss:// support
 def _format_redis_url(url: str) -> str:
@@ -143,15 +151,26 @@ def _format_redis_url(url: str) -> str:
         url = f"{url}{separator}ssl_cert_reqs=CERT_NONE"
     return url
 
-_broker_url = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-_result_backend = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
-
-CELERY_BROKER_URL = _format_redis_url(_broker_url)
-CELERY_RESULT_BACKEND = _format_redis_url(_result_backend)
+# For local development, use eager execution if no explicit broker is set
+if os.getenv('CELERY_BROKER_URL'):
+    _broker_url = os.getenv('CELERY_BROKER_URL')
+    _result_backend = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+    CELERY_BROKER_URL = _format_redis_url(_broker_url)
+    CELERY_RESULT_BACKEND = _format_redis_url(_result_backend)
+    CELERY_TASK_ALWAYS_EAGER = False
+else:
+    # Local development: use eager execution to run tasks synchronously
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'cache'
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+# Use threads pool on Windows to avoid multiprocessing issues
+CELERY_WORKER_POOL = 'threads'
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
 CELERY_BEAT_SCHEDULE = {
     'run-monitoring-checks': {
         'task': 'apps.monitoring.tasks.run_all_monitoring_checks',

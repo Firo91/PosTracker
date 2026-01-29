@@ -484,13 +484,24 @@ def unit_detail(request, unit_id):
     unit = get_object_or_404(Unit, id=unit_id)
     devices = unit.devices.all().order_by('name')
 
-    # Status summary for this unit
+    # Status summary for this unit - map device statuses to template expectations
     status_counts = (
         devices
         .values('last_status')
         .annotate(count=Count('id'))
     )
-    status_summary = {row['last_status']: row['count'] for row in status_counts}
+    
+    # Map device status to template status categories
+    status_summary = {'online': 0, 'offline': 0, 'unknown': 0}
+    for row in status_counts:
+        status = row['last_status']
+        count = row['count']
+        if status == 'UP':
+            status_summary['online'] += count
+        elif status in ('DOWN', 'DEGRADED'):
+            status_summary['offline'] += count
+        else:  # UNKNOWN
+            status_summary['unknown'] += count
 
     return render(request, 'dashboard/unit_detail.html', {
         'unit': unit,
