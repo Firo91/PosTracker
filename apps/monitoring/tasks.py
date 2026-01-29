@@ -140,9 +140,15 @@ def check_device(self, device_id: int):
         )
         
         logger.info(f"Device {device.name} status changed: {old_status} → {new_status}")
+
+        # Send status change alert to ChatWarning
+        _send_status_change_alert(device, old_status, new_status, reason)
     else:
         device.save(update_fields=['last_check_at'])
     
+    # Check for metric-based alerts and send to ChatWarning
+    _check_and_send_alerts(device, latest_agent)
+
     logger.info(
         f"Check complete for {device.name}: {new_status} "
         f"(ping: {check_result.ping_ok}, {check_result.ping_ms}ms)"
@@ -312,3 +318,28 @@ def _check_and_send_alerts(device: Device, agent_report=None):
     
     except Exception as e:
         logger.error(f"Error checking/sending alerts for {device.name}: {e}", exc_info=True)
+
+
+def _send_status_change_alert(device: Device, old_status: str, new_status: str, reason: str) -> None:
+    """
+    Send a status change alert to ChatWarning if integration is configured.
+    """
+    try:
+        from postracker_integration import send_status_change_alert
+    except ImportError:
+        logger.warning("postracker_integration not available. Install requests package.")
+        return
+
+    try:
+        send_status_change_alert(
+            device_name=device.name,
+            old_status=old_status,
+            new_status=new_status,
+            reason=reason,
+            channel_name='alerts'
+        )
+    except Exception as exc:
+        logger.error(
+            f"Error sending status change alert for {device.name}: {exc}",
+            exc_info=True
+        )
