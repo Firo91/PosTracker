@@ -88,7 +88,8 @@ class ChatWarningIntegration:
         message: str,
         channel_name: str = 'alerts',
         previous_status: Optional[str] = None,
-        severity: str = 'info'
+        severity: str = 'info',
+        unit_name: Optional[str] = None
     ) -> bool:
         """
         Send an alert to ChatWarning.
@@ -149,10 +150,15 @@ class ChatWarningIntegration:
                 return False
             
             # Build alert title - show status transition if applicable
-            if previous_status and previous_status != status:
-                title = f"{device_name}: {previous_status} → {status}"
+            if unit_name:
+                device_label = f"{device_name} ({unit_name})"
             else:
-                title = f"{device_name}: {status}"
+                device_label = device_name
+            
+            if previous_status and previous_status != status:
+                title = f"{device_label}: {previous_status} → {status}"
+            else:
+                title = f"{device_label}: {status}"
             
             # Prepare alert payload for ChatWarning API
             alert_payload = {
@@ -218,7 +224,8 @@ def send_device_alert(
     message: str,
     channel_name: str = 'alerts',
     previous_status: Optional[str] = None,
-    severity: str = 'info'
+    severity: str = 'info',
+    unit_name: Optional[str] = None
 ) -> bool:
     """
     Send a device alert to ChatWarning.
@@ -233,6 +240,7 @@ def send_device_alert(
         channel_name: Target channel in ChatWarning (default: 'alerts')
         previous_status: Previous status (for status changes)
         severity: Alert severity (info, warning, critical)
+        unit_name: Unit name (optional, added to title if provided)
         
     Returns:
         True if alert sent successfully, False otherwise
@@ -244,7 +252,8 @@ def send_device_alert(
         message=message,
         channel_name=channel_name,
         previous_status=previous_status,
-        severity=severity
+        severity=severity,
+        unit_name=unit_name
     )
 
 

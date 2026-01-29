@@ -391,6 +391,7 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
 
     try:
         channel_name = 'alerts'
+        unit_name = device.unit.name if device.unit else None
         sent = send_device_alert(
             device_name=device.name,
             status=status,
@@ -398,7 +399,8 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
             message=message,
             channel_name=channel_name,
             previous_status=last_alert.new_status if last_alert else '',
-            severity='warning' if status == 'DEGRADED' else 'info'
+            severity='warning' if status == 'DEGRADED' else 'info',
+            unit_name=unit_name
         )
 
         logger.info(f"Alert send result for {device.name}: {sent}")
