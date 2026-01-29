@@ -99,9 +99,6 @@ def check_device(self, device_id: int):
     # Save check result
     check_result.save()
     
-    # Check for alerts and send to ChatWarning
-    _check_and_send_alerts(device, latest_agent)
-    
     # Update device status if thresholds are met
     old_status = device.last_status
     
@@ -110,6 +107,22 @@ def check_device(self, device_id: int):
     
     # Compute overall status considering ping and agent health
     new_status = device.compute_overall_status()
+
+    # Build reason summary for status/alert messaging
+    if check_result.ping_ok is False:
+        if agent_fresh:
+            reason = "Ping failed but agent reporting; treating as reachable"
+        else:
+            reason = "Ping failed"
+    elif check_result.ping_ok is True:
+        if agent_healthy is False:
+            reason = "Agent reported unhealthy services/processes"
+        elif agent_healthy is True:
+            reason = "Ping OK and agent healthy"
+        else:
+            reason = "Ping OK"
+    else:
+        reason = "Using latest agent report" if agent_fresh else "No recent data"
     
     if new_status != old_status:
         device.last_status = new_status
@@ -118,20 +131,6 @@ def check_device(self, device_id: int):
         
         # Record status change in history
         from apps.monitoring.models import StatusChangeHistory
-        if check_result.ping_ok is False:
-            if agent_fresh:
-                reason = "Ping failed but agent reporting; treating as reachable"
-            else:
-                reason = "Ping failed"
-        elif check_result.ping_ok is True:
-            if agent_healthy is False:
-                reason = "Agent reported unhealthy services/processes"
-            elif agent_healthy is True:
-                reason = "Ping OK and agent healthy"
-            else:
-                reason = "Ping OK"
-        else:
-            reason = "Using latest agent report" if agent_fresh else "No recent data"
         StatusChangeHistory.objects.create(
             device=device,
             old_status=old_status,
@@ -141,11 +140,22 @@ def check_device(self, device_id: int):
         
         logger.info(f"Device {device.name} status changed: {old_status} → {new_status}")
 
-        # Send status change alert to ChatWarning
-        _send_status_change_alert(device, old_status, new_status, reason)
+        # Send status alert based on configured mode
+        if getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', False):
+            _send_status_once_per_status(device, new_status, reason)
+        else:
+            _send_status_change_alert(device, old_status, new_status, reason)
     else:
         device.save(update_fields=['last_check_at'])
-    
+
+        # If enabled, send a status alert once per status even without changes
+        if getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', False):
+            _send_status_once_per_status(device, new_status, reason)
+
+    # Optional: send a status update alert on every check
+    if getattr(settings, 'ALERT_SEND_STATUS_EVERY_CHECK', False):
+        _send_status_update_alert(device, new_status, check_result, agent_healthy)
+
     # Check for metric-based alerts and send to ChatWarning
     _check_and_send_alerts(device, latest_agent)
 
@@ -341,5 +351,102 @@ def _send_status_change_alert(device: Device, old_status: str, new_status: str, 
     except Exception as exc:
         logger.error(
             f"Error sending status change alert for {device.name}: {exc}",
+            exc_info=True
+        )
+
+
+def _send_status_once_per_status(device: Device, status: str, reason: str) -> None:
+    """
+    Send a status alert only once per status value (until it changes).
+    """
+    try:
+        from postracker_integration import send_device_alert
+        from apps.monitoring.models import AlertLog
+    except ImportError:
+        logger.warning("postracker_integration not available. Install requests package.")
+        return
+
+    last_alert = AlertLog.objects.filter(
+        device=device,
+        alert_type='STATUS_CHANGE'
+    ).order_by('-sent_at').first()
+
+    if last_alert and last_alert.new_status == status:
+        return
+
+    message = f"Device status update: {status}"
+    if reason:
+        message += f". Reason: {reason}"
+
+    try:
+        sent = send_device_alert(
+            device_name=device.name,
+            status=status,
+            alert_type='STATUS_CHANGE',
+            message=message,
+            channel_name='alerts',
+            previous_status=last_alert.new_status if last_alert else '',
+            severity='warning' if status == 'DEGRADED' else 'info'
+        )
+
+        if sent:
+            AlertLog.objects.create(
+                device=device,
+                alert_type='STATUS_CHANGE',
+                old_status=last_alert.new_status if last_alert else '',
+                new_status=status,
+                message=message
+            )
+    except Exception as exc:
+        logger.error(
+            f"Error sending status update alert for {device.name}: {exc}",
+            exc_info=True
+        )
+
+
+def _send_status_update_alert(
+    device: Device,
+    status: str,
+    check_result: CheckResult,
+    agent_healthy: Optional[bool]
+) -> None:
+    """
+    Send a status update alert to ChatWarning on every check.
+    """
+    try:
+        from postracker_integration import send_device_alert
+    except ImportError:
+        logger.warning("postracker_integration not available. Install requests package.")
+        return
+
+    ping_text = "n/a"
+    if check_result.ping_ok is True and check_result.ping_ms is not None:
+        ping_text = f"{check_result.ping_ms}ms"
+    elif check_result.ping_ok is False:
+        ping_text = "failed"
+
+    agent_text = "unknown"
+    if agent_healthy is True:
+        agent_text = "healthy"
+    elif agent_healthy is False:
+        agent_text = "unhealthy"
+
+    message = (
+        f"Status update: {status}. "
+        f"Ping: {ping_text}. Agent: {agent_text}."
+    )
+
+    try:
+        send_device_alert(
+            device_name=device.name,
+            status=status,
+            alert_type='STATUS_UPDATE',
+            message=message,
+            channel_name='alerts',
+            severity='info'
+        )
+    except Exception as exc:
+        logger.error(
+            f"Error sending status update alert for {device.name}: {exc}",
             exc_info=True
         )

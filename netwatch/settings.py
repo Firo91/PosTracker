@@ -207,6 +207,8 @@ ALERT_EMAIL_RECIPIENTS = os.getenv('ALERT_EMAIL_RECIPIENTS', '').split(',')
 ALERT_CHAT_BASE_URL = os.getenv('ALERT_CHAT_BASE_URL', '')
 ALERT_CHAT_USER = os.getenv('ALERT_CHAT_USER', '')
 ALERT_CHAT_PASS = os.getenv('ALERT_CHAT_PASS', '')
+ALERT_SEND_STATUS_EVERY_CHECK = os.getenv('ALERT_SEND_STATUS_EVERY_CHECK', 'False').lower() in ('true', '1', 'yes')
+ALERT_STATUS_ALERT_ONCE_PER_STATUS = os.getenv('ALERT_STATUS_ALERT_ONCE_PER_STATUS', 'False').lower() in ('true', '1', 'yes')
 
 # Alert Thresholds for Device Monitoring
 # CPU usage threshold (percentage) - alert when exceeded
