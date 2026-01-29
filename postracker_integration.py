@@ -29,6 +29,11 @@ class ChatWarningIntegration:
         self.password = os.getenv('ALERT_CHAT_PASS', '')
         self.timeout = 10  # seconds
         
+        # Log credentials status for debugging
+        logger.info(f"DEBUG: ChatWarning init - base_url={self.base_url}")
+        logger.info(f"DEBUG: ChatWarning init - username={self.username}")
+        logger.info(f"DEBUG: ChatWarning init - password_set={bool(self.password)}")
+        
         if not all([self.base_url, self.username, self.password]):
             logger.warning(
                 "ChatWarning integration not configured. "
@@ -71,6 +76,7 @@ class ChatWarningIntegration:
         try:
             # First, get the channel ID by querying /api/chat/channels/
             try:
+                logger.info(f"DEBUG: Fetching channels from {self.base_url}/api/chat/channels/ with user={self.username}")
                 channels_response = requests.get(
                     f"{self.base_url}/api/chat/channels/",
                     auth=(self.username, self.password),
