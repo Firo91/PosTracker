@@ -64,6 +64,10 @@ def check_device(self, device_id: int):
     
     logger.info(f"Checking device: {device.name} ({device.ip_address})")
     
+    # DEBUG: Log current settings
+    logger.info(f"DEBUG: Settings loaded - ALERT_CHAT_BASE_URL={getattr(settings, 'ALERT_CHAT_BASE_URL', 'NOT SET')}")
+    logger.info(f"DEBUG: Settings loaded - ALERT_STATUS_ALERT_ONCE_PER_STATUS={getattr(settings, 'ALERT_STATUS_ALERT_ONCE_PER_STATUS', 'NOT SET')}")
+    
     start_time = time.time()
     errors = []
     freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
