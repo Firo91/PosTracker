@@ -161,7 +161,8 @@ if os.getenv('CELERY_BROKER_URL'):
 else:
     # Local development: use eager execution to run tasks synchronously
     CELERY_BROKER_URL = 'memory://'
-    CELERY_RESULT_BACKEND = 'cache'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
+    CELERY_CACHE_BACKEND = 'memory'
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_ACCEPT_CONTENT = ['json']
