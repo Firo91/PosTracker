@@ -9,6 +9,7 @@ import logging
 import json
 import requests
 from typing import Optional, Dict, Any
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,13 @@ class ChatWarningIntegration:
         logger.info(f"DEBUG: ChatWarning init - username={self.username}")
         logger.info(f"DEBUG: ChatWarning init - password_set={bool(self.password)}")
         
+        # JWT token cache
+        self._access_token = None
+        self._token_expiry = None
+        
+        # Channel cache
+        self._channel_cache = {}
+        
         if not all([self.base_url, self.username, self.password]):
             logger.warning(
                 "ChatWarning integration not configured. "
@@ -43,6 +51,34 @@ class ChatWarningIntegration:
     def is_configured(self) -> bool:
         """Check if integration is properly configured."""
         return bool(self.base_url and self.username and self.password)
+    
+    def _get_token(self) -> Optional[str]:
+        """Get JWT access token, using cache if valid."""
+        # Check if cached token is still valid
+        if self._access_token and self._token_expiry and datetime.now() < self._token_expiry:
+            return self._access_token
+        
+        # Get new token
+        try:
+            logger.info(f"DEBUG: Requesting JWT token from {self.base_url}/api/token/")
+            response = requests.post(
+                f"{self.base_url}/api/token/",
+                json={"username": self.username, "password": self.password},
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            self._access_token = data.get('access')
+            # Token valid for 24 hours, cache for 23 hours to be safe
+            self._token_expiry = datetime.now() + timedelta(hours=23)
+            
+            logger.info("DEBUG: JWT token obtained successfully")
+            return self._access_token
+            
+        except Exception as e:
+            logger.error(f"Failed to get JWT token from ChatWarning: {e}")
+            return None
     
     def send_alert(
         self,
@@ -74,12 +110,24 @@ class ChatWarningIntegration:
             return False
         
         try:
+            # Get JWT token
+            token = self._get_token()
+            if not token:
+                logger.error("Failed to obtain JWT token")
+                return False
+            
+            # Headers with Bearer token
+            headers = {
+                'Authorization': f'Bearer {token}',
+                'Content-Type': 'application/json'
+            }
+            
             # First, get the channel ID by querying /api/chat/channels/
             try:
-                logger.info(f"DEBUG: Fetching channels from {self.base_url}/api/chat/channels/ with user={self.username}")
+                logger.info(f"DEBUG: Fetching channels from {self.base_url}/api/chat/channels/")
                 channels_response = requests.get(
                     f"{self.base_url}/api/chat/channels/",
-                    auth=(self.username, self.password),
+                    headers=headers,
                     timeout=self.timeout
                 )
                 channels_response.raise_for_status()
@@ -121,7 +169,7 @@ class ChatWarningIntegration:
             response = requests.post(
                 endpoint,
                 json=alert_payload,
-                auth=(self.username, self.password),
+                headers=headers,
                 timeout=self.timeout
             )
             
