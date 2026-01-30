@@ -162,6 +162,9 @@ def device_detail_view(request, device_id):
     
     # Get latest agent report for system metrics
     latest_agent_report = device.agent_reports.first()
+    freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
+    freshness_cutoff = timezone.now() - timedelta(minutes=freshness_minutes)
+    agent_report_is_fresh = bool(latest_agent_report and latest_agent_report.reported_at >= freshness_cutoff)
     
     # Get status change history (last 10 changes)
     status_changes = device.status_history.all()[:10]
@@ -183,6 +186,7 @@ def device_detail_view(request, device_id):
         'recent_agent_reports': recent_agent_reports,
         'latest_result': latest_result,
         'latest_agent_report': latest_agent_report,
+        'agent_report_is_fresh': agent_report_is_fresh,
         'statistics': statistics,
         'hours': hours,
         'status_changes': status_changes,

@@ -204,39 +204,39 @@
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Agent Status</h5>
-                {% with agent=device.agent_reports.first %}
-                    {% if agent %}
-                        <p class="mb-2">
-                            <strong>Health:</strong>
-                            {% if agent.agent_healthy %}
-                                <span class="badge bg-success">Healthy</span>
-                            {% else %}
-                                <span class="badge bg-danger">Unhealthy</span>
-                            {% endif %}
-                        </p>
-                        <p class="text-muted small">Last Report: {{ agent.reported_at|timesince }} ago</p>
-                        
-                        {% if agent.processes_status %}
-                            <h6 class="mt-3">Processes</h6>
-                            <table class="table table-sm">
-                                {% for name, process in agent.processes_status.items %}
-                                <tr>
-                                    <td><strong>{{ name }}</strong></td>
-                                    <td>
-                                        {% if process.running %}
-                                            <span class="badge bg-success">Running ({{ process.count }})</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Not Running</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </table>
+                {% if latest_agent_report %}
+                    <p class="mb-2">
+                        <strong>Health:</strong>
+                        {% if not agent_report_is_fresh %}
+                            <span class="badge bg-warning text-dark">Stale</span>
+                        {% elif latest_agent_report.agent_healthy %}
+                            <span class="badge bg-success">Healthy</span>
+                        {% else %}
+                            <span class="badge bg-danger">Unhealthy</span>
                         {% endif %}
-                    {% else %}
-                        <p class="text-muted">No agent reports yet.</p>
+                    </p>
+                    <p class="text-muted small">Last Report: {{ latest_agent_report.reported_at|timesince }} ago</p>
+                    
+                    {% if latest_agent_report.processes_status %}
+                        <h6 class="mt-3">Processes</h6>
+                        <table class="table table-sm">
+                            {% for name, process in latest_agent_report.processes_status.items %}
+                            <tr>
+                                <td><strong>{{ name }}</strong></td>
+                                <td>
+                                    {% if process.running %}
+                                        <span class="badge bg-success">Running ({{ process.count }})</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Not Running</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </table>
                     {% endif %}
-                {% endwith %}
+                {% else %}
+                    <p class="text-muted">No agent reports yet.</p>
+                {% endif %}
             </div>
         </div>
     </div>
