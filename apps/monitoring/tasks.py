@@ -160,6 +160,42 @@ def check_device(self, device_id: int):
             logger.info(f"Checking once-per-status alert for {device.name} (current status: {new_status})")
             _send_status_once_per_status(device, new_status, reason)
 
+    # Send separate alerts for ping state changes
+    if device.ping_enabled and check_result.ping_ok is not None:
+        current_ping_state = check_result.ping_ok
+        old_ping_state = device.last_ping_state
+        
+        if old_ping_state is not None and current_ping_state != old_ping_state:
+            # Ping state changed
+            ping_status_text = "UP" if current_ping_state else "DOWN"
+            old_ping_text = "UP" if old_ping_state else "DOWN"
+            _send_ping_alert(device, old_ping_text, ping_status_text)
+            logger.info(f"Ping state changed for {device.name}: {old_ping_text} → {ping_status_text}")
+        
+        # Update last ping state
+        device.last_ping_state = current_ping_state
+    
+    # Send separate alerts for agent state changes
+    if agent_healthy is not None:
+        current_agent_state = agent_healthy
+        old_agent_state = device.last_agent_state
+        
+        if old_agent_state is not None and current_agent_state != old_agent_state:
+            # Agent state changed
+            agent_status_text = "UP" if current_agent_state else "DOWN"
+            old_agent_text = "UP" if old_agent_state else "DOWN"
+            _send_agent_alert(device, old_agent_text, agent_status_text)
+            logger.info(f"Agent state changed for {device.name}: {old_agent_text} → {agent_status_text}")
+        
+        # Update last agent state
+        device.last_agent_state = current_agent_state
+    
+    # Save the updated ping and agent states
+    if device.ping_enabled:
+        device.save(update_fields=['last_check_at', 'last_ping_state', 'last_agent_state'])
+    else:
+        device.save(update_fields=['last_check_at', 'last_agent_state'])
+
     # Optional: send a status update alert on every check
     if getattr(settings, 'ALERT_SEND_STATUS_EVERY_CHECK', False):
         _send_status_update_alert(device, new_status, check_result, agent_healthy)
@@ -466,5 +502,81 @@ def _send_status_update_alert(
     except Exception as exc:
         logger.error(
             f"Error sending status update alert for {device.name}: {exc}",
+            exc_info=True
+        )
+
+
+def _send_ping_alert(device: Device, old_ping_status: str, new_ping_status: str) -> None:
+    """
+    Send an alert when ping status changes (UP <-> DOWN).
+    
+    Args:
+        device: The device being monitored
+        old_ping_status: Previous ping status ("UP" or "DOWN")
+        new_ping_status: Current ping status ("UP" or "DOWN")
+    """
+    try:
+        from postracker_integration import send_device_alert
+    except ImportError:
+        logger.warning("postracker_integration not available")
+        return
+    
+    unit_name = device.unit.name if device.unit else None
+    severity = "info" if new_ping_status == "UP" else "warning"
+    message = f"Ping status: {old_ping_status} → {new_ping_status}"
+    
+    try:
+        send_device_alert(
+            device_name=device.name,
+            status=new_ping_status,
+            alert_type='PING_STATE_CHANGE',
+            message=message,
+            channel_name='alerts',
+            previous_status=old_ping_status,
+            severity=severity,
+            unit_name=unit_name
+        )
+        logger.info(f"Ping alert sent for {device.name}: {old_ping_status} → {new_ping_status}")
+    except Exception as exc:
+        logger.error(
+            f"Error sending ping alert for {device.name}: {exc}",
+            exc_info=True
+        )
+
+
+def _send_agent_alert(device: Device, old_agent_status: str, new_agent_status: str) -> None:
+    """
+    Send an alert when agent status changes (UP <-> DOWN).
+    
+    Args:
+        device: The device being monitored
+        old_agent_status: Previous agent status ("UP" or "DOWN")
+        new_agent_status: Current agent status ("UP" or "DOWN")
+    """
+    try:
+        from postracker_integration import send_device_alert
+    except ImportError:
+        logger.warning("postracker_integration not available")
+        return
+    
+    unit_name = device.unit.name if device.unit else None
+    severity = "info" if new_agent_status == "UP" else "warning"
+    message = f"Agent status: {old_agent_status} → {new_agent_status}"
+    
+    try:
+        send_device_alert(
+            device_name=device.name,
+            status=new_agent_status,
+            alert_type='AGENT_STATE_CHANGE',
+            message=message,
+            channel_name='alerts',
+            previous_status=old_agent_status,
+            severity=severity,
+            unit_name=unit_name
+        )
+        logger.info(f"Agent alert sent for {device.name}: {old_agent_status} → {new_agent_status}")
+    except Exception as exc:
+        logger.error(
+            f"Error sending agent alert for {device.name}: {exc}",
             exc_info=True
         )

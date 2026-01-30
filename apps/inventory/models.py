@@ -211,6 +211,18 @@ class Device(models.Model):
         blank=True,
         help_text="When the agent last reported status"
     )
+    
+    # Separate state tracking for independent alerts
+    last_ping_state = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Last known ping state (True=UP/OK, False=DOWN/Failed)"
+    )
+    last_agent_state = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Last known agent state (True=Healthy, False=Unhealthy/None)"
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
