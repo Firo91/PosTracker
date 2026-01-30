@@ -108,7 +108,8 @@ class APITokenAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Token Information', {
-            'fields': ('name', 'device', 'token', 'enabled')
+            'fields': ('name', 'device', 'token', 'enabled'),
+            'description': 'Leave Device blank for a generic token (can query all devices), or select a specific device to limit access.'
         }),
         ('Metadata', {
             'fields': ('created_at', 'last_used'),
