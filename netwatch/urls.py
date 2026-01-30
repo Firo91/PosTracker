@@ -5,7 +5,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
 from django.contrib.auth.decorators import login_required
-from apps.monitoring.api_views import agent_report
+from apps.monitoring.api_views import agent_report, device_status
 
 # Restrict admin access to authenticated users
 admin.site.login = login_required(admin.site.login)
@@ -17,6 +17,7 @@ urlpatterns = [
     path('dashboard/', include('apps.dashboard.urls')),
     path('inventory/', include('apps.inventory.urls')),
     path('api/agent-report/', agent_report, name='agent_report'),
+    path('api/device-status/', device_status, name='device_status'),
 ]
 
 # Customize admin site

@@ -170,3 +170,134 @@ def agent_report(request):
     except Exception as e:
         logger.error(f"Error processing agent report: {e}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def device_status(request):
+    """
+    Get current status for one or more devices.
+    Requires: Authorization header with Bearer token
+    
+    Query parameters:
+    - devices: comma-separated device names or IDs (e.g., ?devices=Caps,10.18.70.36 or ?devices=1,2,3)
+    - unit: unit name to get all devices in that unit (e.g., ?unit=Store1)
+    
+    Returns latest AgentReport metrics for each device.
+    """
+    try:
+        # Validate API token
+        api_token = validate_api_token(request)
+        if not api_token:
+            return JsonResponse({'error': 'Invalid or missing API token'}, status=401)
+        
+        # Get query parameters
+        devices_param = request.GET.get('devices', '')
+        unit_param = request.GET.get('unit', '')
+        
+        if not devices_param and not unit_param:
+            return JsonResponse({
+                'error': 'Either "devices" or "unit" parameter is required',
+                'usage': {
+                    'by_devices': '/api/device-status/?devices=Caps,ServerA',
+                    'by_unit': '/api/device-status/?unit=Store1'
+                }
+            }, status=400)
+        
+        # Find devices
+        devices = []
+        
+        if unit_param:
+            # Get all devices in the unit
+            from apps.inventory.models import Unit
+            try:
+                unit = Unit.objects.get(name__iexact=unit_param)
+                devices = list(Device.objects.filter(unit=unit, enabled=True))
+            except Unit.DoesNotExist:
+                return JsonResponse({'error': f'Unit "{unit_param}" not found'}, status=404)
+        
+        elif devices_param:
+            # Parse comma-separated device identifiers
+            device_identifiers = [d.strip() for d in devices_param.split(',') if d.strip()]
+            
+            for identifier in device_identifiers:
+                # Try to find by ID (if numeric)
+                if identifier.isdigit():
+                    try:
+                        device = Device.objects.get(id=int(identifier))
+                        devices.append(device)
+                        continue
+                    except Device.DoesNotExist:
+                        pass
+                
+                # Try to find by name
+                try:
+                    device = Device.objects.get(name__iexact=identifier)
+                    devices.append(device)
+                    continue
+                except Device.DoesNotExist:
+                    pass
+                
+                # Try to find by IP address
+                try:
+                    device = Device.objects.get(ip_address=identifier)
+                    devices.append(device)
+                    continue
+                except Device.DoesNotExist:
+                    pass
+        
+        if not devices:
+            return JsonResponse({
+                'error': 'No devices found',
+                'searched': devices_param or f'unit: {unit_param}'
+            }, status=404)
+        
+        # Build response with latest agent data for each device
+        results = []
+        
+        for device in devices:
+            latest_agent = device.agent_reports.first()
+            
+            device_data = {
+                'device_id': device.id,
+                'device_name': device.name,
+                'ip_address': device.ip_address,
+                'device_type': device.device_type,
+                'unit': device.unit.name if device.unit else None,
+                'location': device.location,
+                'enabled': device.enabled,
+                'status': device.last_status,
+            }
+            
+            if latest_agent:
+                device_data.update({
+                    'agent_healthy': latest_agent.agent_healthy,
+                    'reported_at': latest_agent.reported_at.isoformat(),
+                    'uptime_hours': latest_agent.uptime_hours,
+                    'uptime_days': round(latest_agent.uptime_hours / 24, 1) if latest_agent.uptime_hours else None,
+                    'cpu_percent': latest_agent.cpu_percent,
+                    'memory_percent': latest_agent.memory_percent,
+                    'memory_used_gb': latest_agent.memory_used_gb,
+                    'memory_total_gb': latest_agent.memory_total_gb,
+                    'disk_percent': latest_agent.disk_percent,
+                    'disk_used_gb': latest_agent.disk_used_gb,
+                    'disk_free_gb': latest_agent.disk_free_gb,
+                    'disk_total_gb': latest_agent.disk_total_gb,
+                    'processes_status': latest_agent.processes_status,
+                })
+            else:
+                device_data['agent_healthy'] = None
+                device_data['reported_at'] = None
+                device_data['message'] = 'No agent reports yet'
+            
+            results.append(device_data)
+        
+        return JsonResponse({
+            'status': 'success',
+            'count': len(results),
+            'devices': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting device status: {e}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
