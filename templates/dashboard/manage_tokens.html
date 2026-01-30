@@ -183,8 +183,8 @@ function createToken(event) {
     const deviceId = formData.get('device_id');
     const tokenName = formData.get('token_name');
     
-    if (!deviceId || !tokenName) {
-        showMessage('Please fill in all fields', 'danger');
+    if (!tokenName) {
+        showMessage('Please enter a token name', 'danger');
         return;
     }
     
