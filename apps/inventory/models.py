@@ -223,6 +223,11 @@ class Device(models.Model):
         blank=True,
         help_text="Last known agent state (True=Healthy, False=Unhealthy/None)"
     )
+    last_down_services = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Last known set of down services/processes for deduplication"
+    )
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

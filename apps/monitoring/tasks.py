@@ -310,26 +310,50 @@ def _check_and_send_alerts(device: Device, agent_report=None):
     alert_uptime_threshold_hours = alert_uptime_threshold_days * 24
     
     try:
-        # Check for process/service alerts
+        # Check for process/service alerts - only send if state changed
         if not agent_report.agent_healthy:
             # Device has unhealthy services/processes
+            current_down_services = set()
             for service_name, service_info in agent_report.services_status.items():
                 if service_info.get('found', True) and not service_info.get('running', False):
-                    logger.warning(f"Sending process alert for {device.name}: {service_name} down")
-                    send_process_alert(
-                        device_name=device.name,
-                        process_name=service_name,
-                        channel_name='alerts'
-                    )
+                    current_down_services.add(service_name)
             
+            # Get previously known down services
+            previous_down_services = set(device.last_down_services or [])
+            
+            # Only alert on new failures (not in previous state)
+            newly_down = current_down_services - previous_down_services
+            for service_name in newly_down:
+                logger.warning(f"Sending process alert for {device.name}: {service_name} down")
+                send_process_alert(
+                    device_name=device.name,
+                    process_name=service_name,
+                    channel_name='alerts'
+                )
+            
+            # Update the device's last known down services
+            device.last_down_services = list(current_down_services)
+            
+            current_down_processes = set()
             for process_name, process_info in agent_report.processes_status.items():
                 if not process_info.get('running', False):
-                    logger.warning(f"Sending process alert for {device.name}: {process_name} down")
-                    send_process_alert(
-                        device_name=device.name,
-                        process_name=process_name,
-                        channel_name='alerts'
-                    )
+                    current_down_processes.add(process_name)
+            
+            # Get previously known down processes
+            previous_down_processes = set(device.last_down_services or [])
+            
+            # Only alert on new process failures
+            newly_down_processes = current_down_processes - previous_down_processes
+            for process_name in newly_down_processes:
+                logger.warning(f"Sending process alert for {device.name}: {process_name} down")
+                send_process_alert(
+                    device_name=device.name,
+                    process_name=process_name,
+                    channel_name='alerts'
+                )
+            
+            # Update the device's last known down services
+            device.last_down_services = list(current_down_processes | current_down_services)
         
         # Check CPU usage
         if agent_report.cpu_percent and agent_report.cpu_percent > alert_cpu_threshold:
@@ -436,7 +460,7 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
             message=message,
             channel_name=channel_name,
             previous_status=last_alert.new_status if last_alert else '',
-            severity='warning' if status == 'DEGRADED' else 'info',
+            severity='critical' if status == 'DOWN' else 'warning' if status == 'DEGRADED' else 'info',
             unit_name=unit_name
         )
 
