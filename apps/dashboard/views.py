@@ -169,10 +169,13 @@ def device_detail_view(request, device_id):
     # Get agent status change history (last 10 changes)
     agent_status_changes = device.agent_status_history.all()[:10]
     
-    # Get recent agent reports separately (last 100)
+    # Get recent agent reports separately
+    # Calculate limit based on hours: estimate 1 report per minute = 60 per hour
+    # Add 50% buffer for safety, so: hours * 60 * 1.5, minimum 1000
+    report_limit = max(int(hours * 60 * 1.5), 1000)
     recent_agent_reports = device.agent_reports.filter(
         reported_at__gte=since
-    ).order_by('-reported_at')[:100]
+    ).order_by('-reported_at')[:report_limit]
 
     context = {
         'device': device,
