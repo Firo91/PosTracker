@@ -238,6 +238,9 @@ ALERT_DISK_THRESHOLD = float(os.getenv('ALERT_DISK_THRESHOLD', '90'))
 # Device uptime threshold (days) - alert when exceeded (to remind reboot)
 ALERT_UPTIME_THRESHOLD_DAYS = int(os.getenv('ALERT_UPTIME_THRESHOLD_DAYS', '30'))
 
+# Send agent state change alerts (UP/DOWN). Disabled by default to avoid extra noise.
+ALERT_SEND_AGENT_ALERTS = os.getenv('ALERT_SEND_AGENT_ALERTS', 'False').lower() in ('true', '1', 'yes')
+
 # Agent freshness for status determination (minutes)
 AGENT_FRESH_MINUTES = int(os.getenv('AGENT_FRESH_MINUTES', '10'))
 

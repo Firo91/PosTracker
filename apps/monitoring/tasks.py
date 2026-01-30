@@ -189,8 +189,9 @@ def check_device(self, device_id: int):
             # Agent state changed or first detection
             agent_status_text = "UP" if current_agent_state else "DOWN"
             old_agent_text = "UP" if old_agent_state else "DOWN"
-            _send_agent_alert(device, old_agent_text, agent_status_text)
-            logger.info(f"Agent state changed for {device.name}: {old_agent_text} → {agent_status_text}")
+            if getattr(settings, 'ALERT_SEND_AGENT_ALERTS', False):
+                _send_agent_alert(device, old_agent_text, agent_status_text)
+                logger.info(f"Agent state changed for {device.name}: {old_agent_text} → {agent_status_text}")
         
         # Update last agent state
         device.last_agent_state = current_agent_state
@@ -331,12 +332,15 @@ def _check_and_send_alerts(device: Device, agent_report=None):
         recovered_items = previous_down_items - current_down_items
 
         # Only alert on newly down items
+        unit_name = device.unit.name if device.unit else None
+
         for item_name in newly_down_items:
             logger.warning(f"Sending process alert for {device.name}: {item_name} down")
             send_process_alert(
                 device_name=device.name,
                 process_name=item_name,
-                channel_name='alerts'
+                channel_name='alerts',
+                unit_name=unit_name
             )
 
         # Send recovery alerts when items come back up
@@ -345,7 +349,8 @@ def _check_and_send_alerts(device: Device, agent_report=None):
             send_process_recovery_alert(
                 device_name=device.name,
                 process_name=item_name,
-                channel_name='alerts'
+                channel_name='alerts',
+                unit_name=unit_name
             )
 
         # Save last_down_services once (clears list when recovered)

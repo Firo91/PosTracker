@@ -260,7 +260,8 @@ def send_device_alert(
 def send_process_alert(
     device_name: str,
     process_name: str,
-    channel_name: str = 'alerts'
+    channel_name: str = 'alerts',
+    unit_name: Optional[str] = None
 ) -> bool:
     """
     Send a process down alert.
@@ -279,14 +280,16 @@ def send_process_alert(
         alert_type='PROCESS_DOWN',
         message=f'Process "{process_name}" is not running',
         channel_name=channel_name,
-        severity='critical'
+        severity='critical',
+        unit_name=unit_name
     )
 
 
 def send_process_recovery_alert(
     device_name: str,
     process_name: str,
-    channel_name: str = 'alerts'
+    channel_name: str = 'alerts',
+    unit_name: Optional[str] = None
 ) -> bool:
     """
     Send a process recovery alert.
@@ -305,7 +308,8 @@ def send_process_recovery_alert(
         alert_type='PROCESS_RECOVERED',
         message=f'Process "{process_name}" is running again',
         channel_name=channel_name,
-        severity='info'
+        severity='info',
+        unit_name=unit_name
     )
 
 
