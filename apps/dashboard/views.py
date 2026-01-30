@@ -320,22 +320,24 @@ def manage_api_tokens(request):
 @require_http_methods(["POST"])
 def create_api_token(request):
     """
-    Create a new API token for a device.
+    Create a new API token for a device or a generic token (no device).
     """
-    device_id = request.POST.get('device_id')
+    device_id = request.POST.get('device_id', '').strip()
     token_name = request.POST.get('token_name', '').strip()
     
-    if not device_id or not token_name:
-        return JsonResponse({'error': 'Device and token name required'}, status=400)
+    if not token_name:
+        return JsonResponse({'error': 'Token name is required'}, status=400)
     
-    try:
-        device = Device.objects.get(id=device_id)
-    except Device.DoesNotExist:
-        return JsonResponse({'error': 'Device not found'}, status=404)
-    
-    # Delete old token if exists
-    if hasattr(device, 'api_token') and device.api_token:
-        device.api_token.delete()
+    device = None
+    if device_id:
+        try:
+            device = Device.objects.get(id=device_id)
+            
+            # Delete old token if exists for this device
+            if hasattr(device, 'api_token') and device.api_token:
+                device.api_token.delete()
+        except Device.DoesNotExist:
+            return JsonResponse({'error': 'Device not found'}, status=404)
     
     # Create new token
     token_string = APIToken.generate_token()
@@ -346,12 +348,13 @@ def create_api_token(request):
         enabled=True
     )
     
-    logger.info(f"Created API token '{token_name}' for device {device.name}")
+    device_name = device.name if device else 'Generic (All Devices)'
+    logger.info(f"Created API token '{token_name}' for {device_name}")
     
     return JsonResponse({
         'success': True,
         'token': token_string,
-        'device_name': device.name,
+        'device_name': device_name,
         'token_name': token_name,
     })
 

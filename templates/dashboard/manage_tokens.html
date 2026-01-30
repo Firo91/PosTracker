@@ -24,12 +24,13 @@
             <div class="row">
                 <div class="col-md-5">
                     <label for="device_id" class="form-label">Device</label>
-                    <select id="device_id" name="device_id" class="form-select" required>
-                        <option value="">Select a device...</option>
+                    <select id="device_id" name="device_id" class="form-select">
+                        <option value="">None (Generic - All Devices)</option>
                         {% for device in devices %}
                             <option value="{{ device.id }}">{{ device.name }} ({{ device.ip_address }})</option>
                         {% endfor %}
                     </select>
+                    <small class="form-text text-muted">Leave blank for a generic token that can query all devices</small>
                 </div>
                 <div class="col-md-5">
                     <label for="token_name" class="form-label">Token Name</label>
