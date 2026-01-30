@@ -172,6 +172,9 @@ if (isinstance(CELERY_BROKER_URL, str) and CELERY_BROKER_URL.startswith('rediss:
     CELERY_BROKER_USE_SSL = {
         'ssl_cert_reqs': ssl.CERT_NONE,
     }
+    CELERY_BROKER_TRANSPORT_OPTIONS = {
+        'ssl_cert_reqs': ssl.CERT_NONE,
+    }
 if (isinstance(CELERY_RESULT_BACKEND, str) and CELERY_RESULT_BACKEND.startswith('rediss://')):
     CELERY_REDIS_BACKEND_USE_SSL = {
         'ssl_cert_reqs': ssl.CERT_NONE,

@@ -81,6 +81,7 @@ def agent_report(request):
         
         # Extract data
         system_info = data.get('system_info', {})
+        services = data.get('services', {})
         processes = data.get('processes', {})
         
         # Create agent report
@@ -98,6 +99,7 @@ def agent_report(request):
             disk_total_gb=system_info.get('disk_total_gb'),
             uptime_hours=system_info.get('uptime_hours'),
             process_count=system_info.get('process_count'),
+            services_status=services,
             processes_status=processes,
             raw_data=data
         )
@@ -112,6 +114,13 @@ def agent_report(request):
         
         report.agent_healthy = report.determine_health()
         report.save()
+
+        # Send alert checks immediately on agent report (process/service down, CPU/RAM/Disk, etc.)
+        try:
+            from apps.monitoring.tasks import _check_and_send_alerts
+            _check_and_send_alerts(device, report)
+        except Exception as exc:
+            logger.error(f"Error sending alerts from agent report for {device.name}: {exc}", exc_info=True)
         
         # Track agent status changes
         if old_agent_status is not None and old_agent_status != report.agent_healthy:
