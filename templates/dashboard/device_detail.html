@@ -256,7 +256,13 @@
 {% if status_changes %}
 <div class="card mb-4">
     <div class="card-header">
-        <h5 class="mb-0">Recent Status Changes (Ping)</h5>
+        <h5 class="mb-0">
+            {% if device.ping_enabled %}
+                Recent Status Changes (Ping)
+            {% else %}
+                Recent Status Changes (Agent-Based)
+            {% endif %}
+        </h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -330,7 +336,8 @@
 </div>
 {% endif %}
 
-<!-- Ping Check History -->
+<!-- Ping Check History (only show if ping enabled) -->
+{% if device.ping_enabled %}
 <div class="card mb-4">
     <div class="card-header">
         <h5 class="mb-0"><i class="bi bi-activity"></i> Ping Check History</h5>
@@ -394,6 +401,7 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- Agent Check History -->
 <div class="card">
