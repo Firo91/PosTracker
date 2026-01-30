@@ -180,8 +180,9 @@ def check_device(self, device_id: int):
         current_agent_state = agent_healthy
         old_agent_state = device.last_agent_state
         
-        if old_agent_state is not None and current_agent_state != old_agent_state:
-            # Agent state changed
+        # Send agent alert if: state changed OR first time agent is detected
+        if (old_agent_state is None and current_agent_state is not None) or (old_agent_state is not None and current_agent_state != old_agent_state):
+            # Agent state changed or first detection
             agent_status_text = "UP" if current_agent_state else "DOWN"
             old_agent_text = "UP" if old_agent_state else "DOWN"
             _send_agent_alert(device, old_agent_text, agent_status_text)
