@@ -187,19 +187,19 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% with agent=device.agent_reports.first latest_ping=device.check_results.first %}
-                            {% if agent %}
-                                {% if agent.agent_healthy %}
-                                    <span class="check-indicator success"></span>Healthy
-                                {% else %}
-                                    <span class="check-indicator danger"></span>Unhealthy
-                                {% endif %}
-                            {% elif device.last_status == 'DOWN' %}
-                                <span class="text-muted"><i class="bi bi-dash-circle"></i> Offline</span>
+                        {% if agent_is_fresh %}
+                            {% if agent.agent_healthy %}
+                                <span class="check-indicator success"></span>Healthy
                             {% else %}
-                                <span class="text-muted">—</span>
+                                <span class="check-indicator danger"></span>Unhealthy
                             {% endif %}
-                        {% endwith %}
+                        {% elif agent %}
+                            <span class="check-indicator danger"></span>Stale
+                        {% elif device.last_status == 'DOWN' %}
+                            <span class="text-muted"><i class="bi bi-dash-circle"></i> Offline</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
                     </td>
                     <td>
                         {% if agent_is_fresh and agent and agent.processes_status %}
