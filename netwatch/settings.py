@@ -165,6 +165,17 @@ else:
     CELERY_CACHE_BACKEND = 'memory'
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
+ 
+# Redis TLS options (required for rediss:// in local workers)
+import ssl
+if (isinstance(CELERY_BROKER_URL, str) and CELERY_BROKER_URL.startswith('rediss://')):
+    CELERY_BROKER_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE,
+    }
+if (isinstance(CELERY_RESULT_BACKEND, str) and CELERY_RESULT_BACKEND.startswith('rediss://')):
+    CELERY_REDIS_BACKEND_USE_SSL = {
+        'ssl_cert_reqs': ssl.CERT_NONE,
+    }
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

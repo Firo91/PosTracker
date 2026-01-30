@@ -160,12 +160,16 @@ def check_device(self, device_id: int):
             logger.info(f"Checking once-per-status alert for {device.name} (current status: {new_status})")
             _send_status_once_per_status(device, new_status, reason)
 
-    # Send separate alerts for ping state changes
+    # Send separate alerts for ping state changes (and initial UP)
     if device.ping_enabled and check_result.ping_ok is not None:
         current_ping_state = check_result.ping_ok
         old_ping_state = device.last_ping_state
         
-        if old_ping_state is not None and current_ping_state != old_ping_state:
+        if old_ping_state is None and current_ping_state:
+            # First-time UP detection
+            _send_ping_alert(device, "UNKNOWN", "UP")
+            logger.info(f"Ping state initialized for {device.name}: UNKNOWN → UP")
+        elif old_ping_state is not None and current_ping_state != old_ping_state:
             # Ping state changed
             ping_status_text = "UP" if current_ping_state else "DOWN"
             old_ping_text = "UP" if old_ping_state else "DOWN"
@@ -294,6 +298,7 @@ def _check_and_send_alerts(device: Device, agent_report=None):
     try:
         from postracker_integration import (
             send_process_alert,
+            send_process_recovery_alert,
             send_cpu_alert,
             send_memory_alert,
             send_storage_alert,
@@ -310,50 +315,43 @@ def _check_and_send_alerts(device: Device, agent_report=None):
     alert_uptime_threshold_hours = alert_uptime_threshold_days * 24
     
     try:
-        # Check for process/service alerts - only send if state changed
-        if not agent_report.agent_healthy:
-            # Device has unhealthy services/processes
-            current_down_services = set()
-            for service_name, service_info in agent_report.services_status.items():
-                if service_info.get('found', True) and not service_info.get('running', False):
-                    current_down_services.add(service_name)
-            
-            # Get previously known down services
-            previous_down_services = set(device.last_down_services or [])
-            
-            # Only alert on new failures (not in previous state)
-            newly_down = current_down_services - previous_down_services
-            for service_name in newly_down:
-                logger.warning(f"Sending process alert for {device.name}: {service_name} down")
-                send_process_alert(
-                    device_name=device.name,
-                    process_name=service_name,
-                    channel_name='alerts'
-                )
-            
-            # Update the device's last known down services
-            device.last_down_services = list(current_down_services)
-            
-            current_down_processes = set()
-            for process_name, process_info in agent_report.processes_status.items():
-                if not process_info.get('running', False):
-                    current_down_processes.add(process_name)
-            
-            # Get previously known down processes
-            previous_down_processes = set(device.last_down_services or [])
-            
-            # Only alert on new process failures
-            newly_down_processes = current_down_processes - previous_down_processes
-            for process_name in newly_down_processes:
-                logger.warning(f"Sending process alert for {device.name}: {process_name} down")
-                send_process_alert(
-                    device_name=device.name,
-                    process_name=process_name,
-                    channel_name='alerts'
-                )
-            
-            # Update the device's last known down services
-            device.last_down_services = list(current_down_processes | current_down_services)
+        # Build a combined set of down services + down processes
+        current_down_items = set()
+        for service_name, service_info in agent_report.services_status.items():
+            if service_info.get('found', True) and not service_info.get('running', False):
+                current_down_items.add(service_name)
+
+        for process_name, process_info in agent_report.processes_status.items():
+            if not process_info.get('running', False):
+                current_down_items.add(process_name)
+
+        # Compare against the previously saved list to avoid spam
+        previous_down_items = set(device.last_down_services or [])
+        newly_down_items = current_down_items - previous_down_items
+        recovered_items = previous_down_items - current_down_items
+
+        # Only alert on newly down items
+        for item_name in newly_down_items:
+            logger.warning(f"Sending process alert for {device.name}: {item_name} down")
+            send_process_alert(
+                device_name=device.name,
+                process_name=item_name,
+                channel_name='alerts'
+            )
+
+        # Send recovery alerts when items come back up
+        for item_name in recovered_items:
+            logger.info(f"Sending process recovery alert for {device.name}: {item_name} recovered")
+            send_process_recovery_alert(
+                device_name=device.name,
+                process_name=item_name,
+                channel_name='alerts'
+            )
+
+        # Save last_down_services once (clears list when recovered)
+        if current_down_items != previous_down_items:
+            device.last_down_services = list(current_down_items)
+            device.save(update_fields=['last_down_services'])
         
         # Check CPU usage
         if agent_report.cpu_percent and agent_report.cpu_percent > alert_cpu_threshold:

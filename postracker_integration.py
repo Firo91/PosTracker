@@ -283,6 +283,32 @@ def send_process_alert(
     )
 
 
+def send_process_recovery_alert(
+    device_name: str,
+    process_name: str,
+    channel_name: str = 'alerts'
+) -> bool:
+    """
+    Send a process recovery alert.
+    
+    Args:
+        device_name: Name of the device
+        process_name: Name of the process that recovered
+        channel_name: Target channel
+        
+    Returns:
+        True if alert sent successfully
+    """
+    return send_device_alert(
+        device_name=device_name,
+        status='UP',
+        alert_type='PROCESS_RECOVERED',
+        message=f'Process "{process_name}" is running again',
+        channel_name=channel_name,
+        severity='info'
+    )
+
+
 def send_cpu_alert(
     device_name: str,
     cpu_percent: float,
