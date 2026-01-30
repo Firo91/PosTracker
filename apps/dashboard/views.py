@@ -95,8 +95,21 @@ def dashboard_view(request):
     else:
         units = profile.allowed_units.order_by('name')
 
+    # Calculate freshness for each device
+    freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
+    freshness_cutoff = timezone.now() - timedelta(minutes=freshness_minutes)
+    
+    devices_with_freshness = []
+    for device in devices.order_by('name'):
+        latest_agent = device.agent_reports.first()
+        is_fresh = bool(latest_agent and latest_agent.reported_at >= freshness_cutoff)
+        devices_with_freshness.append({
+            'device': device,
+            'agent_report_is_fresh': is_fresh,
+        })
+
     context = {
-        'devices': devices.order_by('name'),
+        'devices': devices_with_freshness,
         'status_summary': status_summary,
         'locations': locations,
         'filters': {
