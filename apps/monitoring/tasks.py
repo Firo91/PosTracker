@@ -180,13 +180,30 @@ def check_device(self, device_id: int):
         device.last_ping_state = current_ping_state
     
     # Send separate alerts for agent state changes
-    if agent_healthy is not None:
-        current_agent_state = agent_healthy
-        old_agent_state = device.last_agent_state
-        
-        # Send agent alert if: state changed OR first time agent is detected
-        if (old_agent_state is None and current_agent_state is not None) or (old_agent_state is not None and current_agent_state != old_agent_state):
-            # Agent state changed or first detection
+    current_agent_state = agent_healthy
+    old_agent_state = device.last_agent_state
+    
+    # Detect agent state changes:
+    # 1. Agent went from healthy/unhealthy to stopped reporting (None)
+    # 2. Agent went from not reporting (None) to reporting (True/False)
+    # 3. Agent went from healthy (True) to unhealthy (False) or vice versa
+    if old_agent_state is not None and current_agent_state is None:
+        # Agent stopped reporting - send DOWN alert
+        old_agent_text = "UP" if old_agent_state else "DOWN"
+        if getattr(settings, 'ALERT_SEND_AGENT_ALERTS', False):
+            _send_agent_alert(device, old_agent_text, "DOWN")
+            logger.info(f"Agent stopped reporting for {device.name}: {old_agent_text} → DOWN (no data)")
+        device.last_agent_state = None
+    elif current_agent_state is not None:
+        # Agent is reporting
+        if old_agent_state is None:
+            # First detection or recovery from no data
+            agent_status_text = "UP" if current_agent_state else "DOWN"
+            if getattr(settings, 'ALERT_SEND_AGENT_ALERTS', False):
+                _send_agent_alert(device, "DOWN", agent_status_text)
+                logger.info(f"Agent reporting resumed for {device.name}: DOWN → {agent_status_text}")
+        elif current_agent_state != old_agent_state:
+            # State changed while reporting
             agent_status_text = "UP" if current_agent_state else "DOWN"
             old_agent_text = "UP" if old_agent_state else "DOWN"
             if getattr(settings, 'ALERT_SEND_AGENT_ALERTS', False):

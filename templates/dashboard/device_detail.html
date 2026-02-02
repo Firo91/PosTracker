@@ -208,13 +208,17 @@
                     <p class="mb-2">
                         <strong>Health:</strong>
                         {% if not agent_report_is_fresh %}
-                            <span class="badge bg-danger">Stale</span>
+                            <span class="badge bg-danger">Unhealthy</span>
+                            <small class="text-muted">(No contact)</small>
                         {% elif latest_agent_report.agent_healthy %}
                             <span class="badge bg-success">Healthy</span>
                         {% else %}
                             <span class="badge bg-danger">Unhealthy</span>
                         {% endif %}
                     </p>
+                    {% if not agent_report_is_fresh %}
+                        <p class="text-danger small mb-2"><strong>Down for: {{ latest_agent_report.reported_at|timesince }}</strong></p>
+                    {% endif %}
                     <p class="text-muted small">Last Report: {{ latest_agent_report.reported_at|timesince }} ago</p>
                     
                     {% if agent_report_is_fresh and latest_agent_report.processes_status %}
