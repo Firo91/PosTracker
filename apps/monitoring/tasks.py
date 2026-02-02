@@ -113,7 +113,18 @@ def check_device(self, device_id: int):
     new_status = device.compute_overall_status()
 
     # Build reason summary for status/alert messaging
-    if check_result.ping_ok is False:
+    if not device.ping_enabled:
+        # Ping disabled - use agent-based reasons only
+        if agent_fresh:
+            if agent_healthy is False:
+                reason = "Agent reported unhealthy services/processes"
+            elif agent_healthy is True:
+                reason = "Agent reported healthy"
+            else:
+                reason = "Agent reporting"
+        else:
+            reason = "No recent agent data"
+    elif check_result.ping_ok is False:
         if agent_fresh:
             reason = "Ping failed but agent reporting; treating as reachable"
         else:
