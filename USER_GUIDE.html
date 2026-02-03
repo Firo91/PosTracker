@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PosTracker User Guide</title>
+    <style>
+        body {
+            font-family: Calibri, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0066cc;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 10px;
+            font-size: 28px;
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 30px;
+            font-size: 20px;
+        }
+        h3 {
+            color: #004499;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #e6f0ff;
+            font-weight: bold;
+            color: #0066cc;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #0066cc;
+            margin: 15px 0;
+        }
+        pre code {
+            background: none;
+            color: #333;
+            padding: 0;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            padding: 15px;
+            border-left: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        .alert-box {
+            background-color: #f8d7da;
+            padding: 15px;
+            border-left: 4px solid #dc3545;
+            margin: 15px 0;
+        }
+        ul, ol {
+            line-height: 1.8;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .section-break {
+            border-top: 2px solid #ddd;
+            margin: 40px 0;
+            padding-top: 20px;
+        }
+        strong {
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PosTracker User Guide</h1>
+        <p><em>Welcome to PosTracker! This guide will walk you through everything you need to know to monitor your servers and devices.</em></p>
+
+        <h2>What is PosTracker?</h2>
+        <p>PosTracker monitors your Windows servers and POS terminals 24/7, watching for:</p>
+        <ul>
+            <li><strong>Device availability</strong> - Is the server online and responding?</li>
+            <li><strong>System health</strong> - CPU, memory, and disk usage</li>
+            <li><strong>Running services</strong> - Are critical services and processes still running?</li>
+            <li><strong>Uptime</strong> - How long since the last reboot?</li>
+        </ul>
+        <p>When something goes wrong, you'll get alerts automatically via ChatWarning.</p>
+
+        <div class="section-break"></div>
+
+        <h2>Getting Started</h2>
+        <h3>1. Login to PosTracker</h3>
+        <p>Navigate to <strong>https://pos.kimsit.com</strong> and login with your credentials.</p>
+        <p>You'll see the <strong>Dashboard</strong> showing all your devices at a glance:</p>
+        <ul>
+            <li><strong>Green badge (UP)</strong> = Device is healthy</li>
+            <li><strong>Yellow badge (DEGRADED)</strong> = Device has issues (high CPU, memory, or a service down)</li>
+            <li><strong>Red badge (DOWN)</strong> = Device is offline or unreachable</li>
+            <li><strong>Red (Unhealthy, No contact)</strong> = Agent hasn't reported in for 10+ minutes</li>
+        </ul>
+
+        <div class="section-break"></div>
+
+        <h2>Setting Up a New Device</h2>
+        
+        <p><strong>Before downloading the agent:</strong> You'll set up the device in PosTracker and create an API token. You can do this from the machine you want to supervise.</p>
+
+        <h3>Step 1: Add the Device in PosTracker</h3>
+        <p>From the dashboard, click the <strong>Add Device</strong> button in the top right.</p>
+
+        <p><strong>Enter Device Information:</strong></p>
+        <table>
+            <tr>
+                <th>Field</th>
+                <th>What to enter</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td><strong>Device Name</strong></td>
+                <td>Friendly name for this device</td>
+                <td>"Store POS Terminal 1" or "Iceland Server"</td>
+            </tr>
+            <tr>
+                <td><strong>IP Address</strong></td>
+                <td>Static IP address of the device</td>
+                <td>192.168.1.100 or 10.18.70.36</td>
+            </tr>
+            <tr>
+                <td><strong>Unit</strong></td>
+                <td>Which store/location this is in</td>
+                <td>"Tigerstaden" or "Main Store"</td>
+            </tr>
+            <tr>
+                <td><strong>Device Type</strong></td>
+                <td>POS or Server</td>
+                <td>Server</td>
+            </tr>
+            <tr>
+                <td><strong>Location</strong></td>
+                <td>Physical location (optional)</td>
+                <td>"Back office" or "2nd floor"</td>
+            </tr>
+            <tr>
+                <td><strong>Enable Ping</strong></td>
+                <td>Should we ping the device?</td>
+                <td>✓ Yes for local devices, ✗ No for remote devices</td>
+            </tr>
+        </table>
+
+        <div class="highlight">
+            <strong>Important for remote devices (like Iceland):</strong>
+            <ul>
+                <li>If the device is on a different network/VPN, <strong>uncheck "Enable Ping"</strong></li>
+                <li>The agent will still report status (all we care about is if the agent is running)</li>
+            </ul>
+        </div>
+
+        <p><strong>Configure Monitoring Thresholds:</strong></p>
+        <p>These defaults are usually fine, but you can adjust:</p>
+        <table>
+            <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>What it means</th>
+            </tr>
+            <tr>
+                <td>Check Interval</td>
+                <td>60 seconds</td>
+                <td>How often to check the device</td>
+            </tr>
+            <tr>
+                <td>Timeout</td>
+                <td>1200 ms</td>
+                <td>How long to wait before giving up</td>
+            </tr>
+            <tr>
+                <td>Failure Threshold</td>
+                <td>3</td>
+                <td>After 3 consecutive failures, mark as DOWN</td>
+            </tr>
+        </table>
+        <p><em>Leave these as-is unless you have a specific reason to change them.</em></p>
+
+        <p>Click <strong>Create Device</strong>. You now have the device registered!</p>
+
+        <h3>Step 2: Create an API Token</h3>
+        <p>The agent needs a token to authenticate with PosTracker. Create one now:</p>
+        <ol>
+            <li>Go to <strong>Dashboard</strong> → <strong>API Tokens</strong></li>
+            <li>Click <strong>Create Token</strong></li>
+            <li>Give it a name like "Iceland Server Agent" or whatever describes this device</li>
+            <li><strong>IMPORTANT:</strong> Select the device you just created from the <strong>Device</strong> dropdown - <strong>Do NOT leave it empty</strong></li>
+            <li>Click <strong>Create Token</strong></li>
+            <li><strong>Copy the token immediately</strong> (you won't see it again!)</li>
+            <li>Save it somewhere safe - you'll need it when installing the agent</li>
+        </ol>
+
+        <div class="alert-box">
+            <strong>⚠️ Critical:</strong> You MUST select the device from the dropdown. If you leave the Device field empty, the token will be generic and the agent will not work correctly. Always select the specific device you created.
+        </div>
+
+        <div class="highlight">
+            <strong>Why you must select the device:</strong> Each agent token is tied to a specific device. When the agent reports in, PosTracker uses the token to know which device is sending the data. Without selecting a device, the agent cannot identify itself.
+        </div>
+
+        <div class="section-break"></div>
+
+        <h2>Installing the Agent</h2>
+        <p>Now that you have created the device and API token, you're ready to install the agent on the machine.</p>
+
+        <h3>Step 1: Download the Agent</h3>
+        <p>Go back to the device detail page in PosTracker and click the <strong>Download Agent</strong> button. This downloads the agent installer package.</p>
+
+        <h3>Step 2: Extract the Files</h3>
+        <p>Extract the ZIP file to a location like:</p>
+        <pre><code>C:\Program Files\PosTracker Agent</code></pre>
+
+        <h3>Step 3: Configure the Agent</h3>
+        <p>Edit the <strong>config.json</strong> file with these settings:</p>
+        <pre><code>{
+  "server_url": "https://pos.kimsit.com",
+  "api_token": "YOUR_TOKEN_HERE",
+  "device_id": "SERVER_NAME",
+  "report_interval": 60,
+  "services": [
+    "w3svc",
+    "MSSQLSERVER"
+  ],
+  "processes": [
+    "PosApp.exe",
+    "BackupService.exe"
+  ]
+}</code></pre>
+        <ul>
+            <li><strong>api_token</strong> = The token you created in Step 2 above (copy and paste it exactly)</li>
+            <li><strong>services</strong> = Windows services to monitor (optional)</li>
+            <li><strong>processes</strong> = Program names to monitor (optional)</li>
+        </ul>
+
+        <div class="success">
+            <strong>Paste your API token here!</strong> This is the token you saved from the previous section. Make sure you copy it exactly, with no spaces before or after.
+        </div>
+
+        <h3>Step 4: Run the Agent</h3>
+        
+        <p><strong>Option A: As a Background Service (Recommended)</strong></p>
+        <p>Run as Administrator:</p>
+        <pre><code>cd C:\Program Files\PosTracker Agent
+.\install_service.bat</code></pre>
+        <p>The agent will start automatically on every boot.</p>
+
+        <p><strong>Option B: Manual (Testing)</strong></p>
+        <pre><code>cd C:\Program Files\PosTracker Agent
+python agent.py</code></pre>
+        <p><em>This runs in your terminal - useful for testing but won't survive a reboot.</em></p>
+
+        <h3>Step 5: Verify It's Working</h3>
+        <p>Go back to PosTracker. Within 1-2 minutes, you should see:</p>
+        <ul>
+            <li>Device status shows <strong>UP</strong> or <strong>DEGRADED</strong></li>
+            <li>A green badge appears on the dashboard</li>
+            <li>Agent metrics appear (CPU, memory, disk, uptime, processes)</li>
+        </ul>
+
+        <div class="alert-box">
+            <strong>If you don't see anything after 2 minutes, check:</strong>
+            <ol>
+                <li>Is the agent running? (Check Task Manager or Services)</li>
+                <li>Is the API token correct in config.json? (Exactly copy-pasted?)</li>
+                <li>Is the server URL correct? (Should be https://pos.kimsit.com)</li>
+            </ol>
+        </div>
+
+        <div class="section-break"></div>
+
+        <h2>Monitoring Your Devices</h2>
+
+        <h3>Dashboard View</h3>
+        <p>The <strong>Dashboard</strong> shows all devices at a glance. Click any device to see detailed status.</p>
+
+        <h3>Device Detail Page</h3>
+        <p>This shows everything about a device:</p>
+
+        <h4>Agent Status Section:</h4>
+        <ul>
+            <li><strong>Health</strong> - Is the agent healthy?
+                <ul>
+                    <li>Green <strong>Healthy</strong> = All monitored services running</li>
+                    <li>Red <strong>Unhealthy</strong> = A service or process is down</li>
+                    <li>Red <strong>Unhealthy (No contact)</strong> = Agent hasn't reported in 10+ minutes</li>
+                    <li>Below shows: <strong>Down for: 2 hours 15 minutes</strong> if disconnected</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h4>System Metrics:</h4>
+        <ul>
+            <li><strong>CPU %</strong> - Current processor usage</li>
+            <li><strong>Memory</strong> - RAM usage (shows actual GB used)</li>
+            <li><strong>Disk</strong> - C: drive usage</li>
+            <li><strong>Uptime</strong> - Hours since last reboot</li>
+        </ul>
+
+        <h4>Processes & Services:</h4>
+        <p>Table showing each service/process you're monitoring:</p>
+        <ul>
+            <li>✓ <strong>Running</strong> = Service is active</li>
+            <li>✗ <strong>Not Running</strong> = Service is down (action needed!)</li>
+        </ul>
+
+        <h4>Status Changes Section:</h4>
+        <p>History of when device status changed (UP → DOWN, etc.)</p>
+
+        <h4>Agent Check History:</h4>
+        <p>Detailed timeline of every check showing metrics over time. Useful for troubleshooting.</p>
+
+        <div class="section-break"></div>
+
+        <h2>Understanding Alerts</h2>
+        <p>Alerts are sent automatically to ChatWarning when something changes.</p>
+
+        <h3>Alert Types</h3>
+        <table>
+            <tr>
+                <th>Alert</th>
+                <th>Meaning</th>
+                <th>Action</th>
+            </tr>
+            <tr>
+                <td><strong>Device UP → DOWN</strong></td>
+                <td>Device went offline</td>
+                <td>Check if server is on, network connected, or agent crashed</td>
+            </tr>
+            <tr>
+                <td><strong>Device DOWN → UP</strong></td>
+                <td>Device came back online</td>
+                <td>No action needed, but verify everything is working</td>
+            </tr>
+            <tr>
+                <td><strong>Ping failed</strong></td>
+                <td>Device not responding to ping</td>
+                <td>Network issue (for ping-enabled devices only)</td>
+            </tr>
+            <tr>
+                <td><strong>Agent Unhealthy</strong></td>
+                <td>A service or process stopped</td>
+                <td>See the "Not Running" items in processes section</td>
+            </tr>
+            <tr>
+                <td><strong>Agent DOWN</strong></td>
+                <td>Agent stopped sending reports (10+ min)</td>
+                <td>Agent crashed or network issue</td>
+            </tr>
+            <tr>
+                <td><strong>CPU High</strong></td>
+                <td>CPU usage above threshold (default 85%)</td>
+                <td>Server is overloaded - check what's running</td>
+            </tr>
+            <tr>
+                <td><strong>Memory High</strong></td>
+                <td>Memory usage above threshold (default 85%)</td>
+                <td>Server needs more RAM or has a memory leak</td>
+            </tr>
+            <tr>
+                <td><strong>Disk Full</strong></td>
+                <td>Disk usage above threshold (default 90%)</td>
+                <td>Clean up old files or add more storage</td>
+            </tr>
+            <tr>
+                <td><strong>Reboot Needed</strong></td>
+                <td>Uptime over 30 days</td>
+                <td>Schedule a reboot at convenient time</td>
+            </tr>
+        </table>
+
+        <h3>Severity Levels</h3>
+        <ul>
+            <li><strong style="color: #dc3545;">🔴 Critical</strong> - Device is DOWN</li>
+            <li><strong style="color: #fd7e14;">🟠 Warning</strong> - DEGRADED status, high resource usage, or agent unhealthy</li>
+            <li><strong style="color: #28a745;">🟢 Info</strong> - Status recovered, device came UP</li>
+        </ul>
+
+        <div class="section-break"></div>
+
+        <h2>Common Tasks</h2>
+
+        <h3>Finding Why a Device is Down</h3>
+        <ol>
+            <li>Go to <strong>Dashboard</strong></li>
+            <li>Find the red device</li>
+            <li>Click it to see details</li>
+            <li>Check <strong>System Status</strong> to see:
+                <ul>
+                    <li>Is agent reporting? (If "No contact" → agent crashed)</li>
+                    <li>Is ping working? (If disabled, agent is only indicator)</li>
+                    <li>What's in the "Not Running" section?</li>
+                </ul>
+            </li>
+        </ol>
+
+        <h3>Starting a Failed Service</h3>
+        <p>If a service shows "Not Running":</p>
+        <ol>
+            <li><strong>SSH or RDP</strong> into the device</li>
+            <li>Open <strong>Services</strong> (services.msc)</li>
+            <li>Find the service in the "Not Running" column</li>
+            <li>Right-click → <strong>Start</strong></li>
+            <li>Check back in PosTracker (takes 1-2 minutes to update)</li>
+        </ol>
+
+        <h3>Checking Recent History</h3>
+        <p>To see what happened in the last hour/day:</p>
+        <ol>
+            <li>Go to device detail page</li>
+            <li>Click <strong>1 Hour</strong> or <strong>6 Hours</strong> button (top right)</li>
+            <li>Scroll down to see "Agent Check History"</li>
+            <li>This shows exact CPU, memory, and process status at each check</li>
+        </ol>
+
+        <h3>Monitoring Multiple Stores</h3>
+        <p>If you manage multiple units:</p>
+        <ol>
+            <li>Dashboard shows all devices grouped by status</li>
+            <li>Use the <strong>Unit</strong> dropdown (if available) to filter by location</li>
+            <li>Or click individual device names to jump to that device</li>
+        </ol>
+
+        <h3>Testing the Agent</h3>
+        <p>To verify the agent is working:</p>
+        <ol>
+            <li>Check <strong>Agent Status</strong> on device detail page</li>
+            <li>If <strong>Health: Healthy</strong> and metrics showing → Agent working</li>
+            <li>If <strong>Health: Unhealthy</strong> → A service you're monitoring is down</li>
+            <li>If <strong>Health: Unhealthy (No contact)</strong> → Agent not running or crashed</li>
+        </ol>
+
+        <div class="section-break"></div>
+
+        <h2>Troubleshooting</h2>
+
+        <h3>Device shows DOWN but I know it's online</h3>
+        
+        <p><strong>Check 1: Is Ping enabled?</strong></p>
+        <ul>
+            <li>For local devices on your network: Ping should be on</li>
+            <li>For remote devices (Iceland): Ping should be OFF, agent only</li>
+        </ul>
+
+        <p><strong>Check 2: Try pinging manually</strong></p>
+        <pre><code>ping 10.18.70.36</code></pre>
+        <p>If you can't ping, it's a network issue, not PosTracker.</p>
+
+        <p><strong>Check 3: Is the agent running?</strong></p>
+        <ul>
+            <li>RDP/SSH to the device</li>
+            <li>Check Task Manager → Services or run: <code>tasklist | findstr agent</code></li>
+            <li>If not running, restart it or check config.json</li>
+        </ul>
+
+        <h3>Agent shows DOWN (No contact) but device is UP</h3>
+
+        <p><em>This means:</em> Device is online but agent hasn't reported in 10+ minutes.</p>
+
+        <p><strong>Quick fix:</strong></p>
+        <ol>
+            <li>RDP/SSH to the device</li>
+            <li>Check if the agent process is running</li>
+            <li>Restart the agent: <code>net stop PosTrackerAgent</code> then <code>net start PosTrackerAgent</code></li>
+            <li>Wait 1-2 minutes</li>
+            <li>Check PosTracker again</li>
+        </ol>
+
+        <p><strong>Why it happens:</strong></p>
+        <ul>
+            <li>Agent crashed</li>
+            <li>Network connectivity issue</li>
+            <li>Agent process got killed</li>
+        </ul>
+
+        <h3>I installed the agent but it's not showing up in PosTracker</h3>
+
+        <p><strong>Checklist:</strong></p>
+        <ul>
+            <li>✓ Did you create an API token? (Required!)</li>
+            <li>✓ Did you paste the token in config.json?</li>
+            <li>✓ Is the agent actually running? (Check Services or Task Manager)</li>
+            <li>✓ Is the server URL correct? (Should be https://pos.kimsit.com)</li>
+            <li>✓ Did you wait 2+ minutes? (First report takes a moment)</li>
+        </ul>
+
+        <p><strong>Check agent logs:</strong></p>
+        <pre><code># If running as service, check Event Viewer
+# Windows Logs → Application
+
+# If running manually, look at console output</code></pre>
+
+        <h3>CPU/Memory shows very high</h3>
+
+        <p>This is real data - something on that device is using resources.</p>
+
+        <p><strong>What to do:</strong></p>
+        <ol>
+            <li>RDP into the device</li>
+            <li>Open Task Manager</li>
+            <li>Sort by CPU % or Memory %</li>
+            <li>Find the process using the most</li>
+            <li>Is it normal? (Example: Database backup job?)</li>
+            <li>If abnormal, close it or investigate</li>
+        </ol>
+
+        <p><em>PosTracker just reports it - you decide if it's a problem.</em></p>
+
+        <h3>A service shows 'Not Running' but it should be running</h3>
+
+        <p><strong>Quick fix:</strong></p>
+        <ol>
+            <li>RDP into the device</li>
+            <li>Open Services (services.msc)</li>
+            <li>Find the service by name</li>
+            <li>Right-click → Start</li>
+        </ol>
+
+        <p><strong>To prevent this in future:</strong></p>
+        <ol>
+            <li>Set service to <strong>Automatic</strong> startup (not Manual)</li>
+            <li>Add a restart policy in Windows Service properties</li>
+        </ol>
+
+        <div class="section-break"></div>
+
+        <h2>Tips & Tricks</h2>
+
+        <h3>Best Practices</h3>
+        <ol>
+            <li><strong>Add descriptive names</strong> - "Iceland Server" is better than "server1"</li>
+            <li><strong>Group by unit</strong> - Assign each device to its unit/store location</li>
+            <li><strong>Monitor critical services only</strong> - Don't monitor every service, just the ones you care about</li>
+            <li><strong>Check regularly</strong> - Glance at the dashboard daily to catch issues early</li>
+            <li><strong>Set up alerts in ChatWarning</strong> - Make sure you're getting notifications</li>
+        </ol>
+
+        <h3>What to Monitor</h3>
+
+        <p><strong>Essential Services:</strong></p>
+        <ul>
+            <li>Any database services (MSSQLSERVER, MySQL)</li>
+            <li>Web server (IIS, Apache)</li>
+            <li>Any business-critical applications</li>
+        </ul>
+
+        <p><strong>Essential Processes:</strong></p>
+        <ul>
+            <li>Main application executable</li>
+            <li>Backup or sync processes</li>
+            <li>Monitoring or agent processes</li>
+        </ul>
+
+        <h3>Performance Tips</h3>
+        <ol>
+            <li><strong>Don't lower check interval below 60 seconds</strong> - Wastes resources</li>
+            <li><strong>On slow networks, increase timeout</strong> - Set to 2000ms or higher</li>
+            <li><strong>For remote devices, disable ping</strong> - Reduces false "DOWN" alerts</li>
+            <li><strong>Archive old data regularly</strong> - PosTracker keeps all history; this can grow large</li>
+        </ol>
+
+        <div class="section-break"></div>
+
+        <h2>Getting Help</h2>
+        <p>If something isn't working:</p>
+        <ol>
+            <li><strong>Check the dashboard</strong> - What color is the device?</li>
+            <li><strong>Check device detail page</strong> - Is agent reporting? What's the last status?</li>
+            <li><strong>Check agent logs</strong> - Is the agent actually running?</li>
+            <li><strong>Check the config</strong> - API token correct? Server URL correct?</li>
+            <li><strong>Restart the agent</strong> - Often fixes "No contact" issues</li>
+        </ol>
+
+        <p>If you get stuck, contact your administrator with:</p>
+        <ul>
+            <li>Device name</li>
+            <li>Device IP address</li>
+            <li>Last time it was working</li>
+            <li>What you see in PosTracker now</li>
+            <li>What you see in agent logs</li>
+        </ul>
+
+        <div class="section-break"></div>
+
+        <h2>Quick Reference</h2>
+
+        <h3>URLs</h3>
+        <ul>
+            <li><strong>Dashboard:</strong> https://pos.kimsit.com/dashboard/</li>
+            <li><strong>Add Device:</strong> https://pos.kimsit.com/dashboard/devices/add/</li>
+            <li><strong>API Tokens:</strong> https://pos.kimsit.com/dashboard/tokens/</li>
+        </ul>
+
+        <h3>Agent Commands</h3>
+        <pre><code># Start agent (if stopped)
+net start PosTrackerAgent
+
+# Stop agent (to troubleshoot)
+net stop PosTrackerAgent
+
+# View agent logs (Windows Event Viewer)
+# Windows Logs → Application → look for "PosTracker"
+
+# Manual run (for testing)
+cd "C:\Program Files\PosTracker Agent"
+python agent.py</code></pre>
+
+        <h3>Default Thresholds</h3>
+        <ul>
+            <li>CPU Alert: 85%</li>
+            <li>Memory Alert: 85%</li>
+            <li>Disk Alert: 90%</li>
+            <li>Uptime Alert: 30 days (time for reboot)</li>
+            <li>Agent Offline: 10 minutes no report</li>
+        </ul>
+
+        <div class="section-break"></div>
+
+        <h2>Questions?</h2>
+        <p>This guide covers 95% of what you need to know. PosTracker is designed to be simple - add devices, install agents, and get alerts. That's it!</p>
+        <p>For specific issues or advanced configuration, ask your administrator.</p>
+
+        <div class="success">
+            <strong>Happy monitoring! 🎯</strong>
+        </div>
+    </div>
+</body>
+</html>
