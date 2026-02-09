@@ -139,12 +139,10 @@
 
         <h2>Setting Up a New Device</h2>
         
-        <p><strong>Before downloading the agent:</strong> You'll set up the device in PosTracker and create an API token. You can do this from the machine you want to supervise.</p>
+        <p><strong>Overview:</strong> You'll add the device, create an API token, then download a pre-configured agent package. The token gets embedded in the package automatically.</p>
 
-        <h3>Step 1: Add the Device in PosTracker</h3>
-        <p>From the dashboard, click the <strong>Add Device</strong> button in the top right.</p>
-
-        <p><strong>Enter Device Information:</strong></p>
+        <h3>Step 1: Create the Device</h3>
+        <p>From the dashboard, click <strong>Add Device</strong> in the top right. Fill in:</p>
         <table>
             <tr>
                 <th>Field</th>
@@ -153,18 +151,18 @@
             </tr>
             <tr>
                 <td><strong>Device Name</strong></td>
-                <td>Friendly name for this device</td>
-                <td>"Store POS Terminal 1" or "Iceland Server"</td>
+                <td>Friendly name</td>
+                <td>"Iceland Server" or "POS-Terminal-1"</td>
             </tr>
             <tr>
                 <td><strong>IP Address</strong></td>
-                <td>Static IP address of the device</td>
-                <td>192.168.1.100 or 10.18.70.36</td>
+                <td>Static IP of the device</td>
+                <td>10.18.70.36</td>
             </tr>
             <tr>
                 <td><strong>Unit</strong></td>
-                <td>Which store/location this is in</td>
-                <td>"Tigerstaden" or "Main Store"</td>
+                <td>Store/location grouping</td>
+                <td>Tigerstaden</td>
             </tr>
             <tr>
                 <td><strong>Device Type</strong></td>
@@ -172,153 +170,90 @@
                 <td>Server</td>
             </tr>
             <tr>
-                <td><strong>Location</strong></td>
-                <td>Physical location (optional)</td>
-                <td>"Back office" or "2nd floor"</td>
-            </tr>
-            <tr>
                 <td><strong>Enable Ping</strong></td>
-                <td>Should we ping the device?</td>
-                <td>✓ Yes for local devices, ✗ No for remote devices</td>
+                <td>Check for local devices, uncheck for remote</td>
+                <td>✗ Unchecked for Iceland</td>
             </tr>
         </table>
 
         <div class="highlight">
-            <strong>Important for remote devices (like Iceland):</strong>
-            <ul>
-                <li>If the device is on a different network/VPN, <strong>uncheck "Enable Ping"</strong></li>
-                <li>The agent will still report status (all we care about is if the agent is running)</li>
-            </ul>
+            <strong>For remote devices (Iceland, VPN, etc):</strong> Uncheck "Enable Ping" - the agent is your only indicator of status.
         </div>
 
-        <p><strong>Configure Monitoring Thresholds:</strong></p>
-        <p>These defaults are usually fine, but you can adjust:</p>
-        <table>
-            <tr>
-                <th>Setting</th>
-                <th>Default</th>
-                <th>What it means</th>
-            </tr>
-            <tr>
-                <td>Check Interval</td>
-                <td>60 seconds</td>
-                <td>How often to check the device</td>
-            </tr>
-            <tr>
-                <td>Timeout</td>
-                <td>1200 ms</td>
-                <td>How long to wait before giving up</td>
-            </tr>
-            <tr>
-                <td>Failure Threshold</td>
-                <td>3</td>
-                <td>After 3 consecutive failures, mark as DOWN</td>
-            </tr>
-        </table>
-        <p><em>Leave these as-is unless you have a specific reason to change them.</em></p>
-
-        <p>Click <strong>Create Device</strong>. You now have the device registered!</p>
+        <p>Leave the thresholds at defaults. Click <strong>Create Device</strong>.</p>
 
         <h3>Step 2: Create an API Token</h3>
-        <p>The agent needs a token to authenticate with PosTracker. Create one now:</p>
+        <p>Go to <strong>Dashboard</strong> → <strong>API Tokens</strong> → <strong>Create New Token</strong></p>
         <ol>
-            <li>Go to <strong>Dashboard</strong> → <strong>API Tokens</strong></li>
+            <li><strong>Token Name:</strong> Give it a descriptive name like "Iceland Server" or "POS-01"</li>
+            <li><strong>Device:</strong> Select the device you just created from the dropdown</li>
             <li>Click <strong>Create Token</strong></li>
-            <li>Give it a name like "Iceland Server Agent" or whatever describes this device</li>
-            <li><strong>IMPORTANT:</strong> Select the device you just created from the <strong>Device</strong> dropdown - <strong>Do NOT leave it empty</strong></li>
-            <li>Click <strong>Create Token</strong></li>
-            <li><strong>Copy the token immediately</strong> (you won't see it again!)</li>
-            <li>Save it somewhere safe - you'll need it when installing the agent</li>
         </ol>
 
         <div class="alert-box">
-            <strong>⚠️ Critical:</strong> You MUST select the device from the dropdown. If you leave the Device field empty, the token will be generic and the agent will not work correctly. Always select the specific device you created.
+            <strong>⚠️ Critical:</strong> You MUST select the device. The token won't work without it tied to a specific device.
         </div>
 
-        <div class="highlight">
-            <strong>Why you must select the device:</strong> Each agent token is tied to a specific device. When the agent reports in, PosTracker uses the token to know which device is sending the data. Without selecting a device, the agent cannot identify itself.
-        </div>
+        <p>A token will display. Click <strong>Copy</strong> to save it, but <strong>you don't need to remember it</strong> - it gets added to the agent package automatically.</p>
 
         <div class="section-break"></div>
 
         <h2>Installing the Agent</h2>
-        <p>Now that you have created the device and API token, you're ready to install the agent on the machine.</p>
+        <p>Now download and install the pre-configured agent package on the machine you want to monitor.</p>
 
-        <h3>Step 1: Download the Pre-Configured Agent</h3>
+        <h3>Step 1: Download the Agent Package</h3>
+        <p>Go to <strong>Dashboard</strong> → <strong>Download Agent</strong></p>
         <ol>
-            <li>Go to <strong>Dashboard</strong> and select the device you created</li>
-            <li>In the download section, select the API token you created from the dropdown</li>
-            <li>Click <strong>Download Agent</strong></li>
+            <li>Select the device from the dropdown (the one you created)</li>
+            <li>Select the API token you just created from the second dropdown</li>
+            <li>Click <strong>Download Agent Package (ZIP)</strong></li>
         </ol>
-        
-        <div class="success">
-            <strong>✓ Automatic Configuration!</strong> When you download the agent, PosTracker automatically creates a pre-configured <code>agent_config.json</code> file with your server URL, device ID, and API token already filled in. No manual editing required!
-        </div>
 
-        <h3>Step 2: Extract the Files</h3>
-        <p>Extract the ZIP file to a location like:</p>
-        <pre><code>C:\Program Files\PosTracker Agent</code></pre>
-
-        <h3>Step 3: Verify Configuration (Optional)</h3>
-        <p>If you want to customize process monitoring, you can edit <strong>agent_config.json</strong>. The file is already configured with:</p>
-        <pre><code>{
-  "server_url": "https://pos.kimsit.com",
-  "device_id": 123,
-  "api_key": "your_token_here_automatically_filled",
-  "check_interval": 60,
-  "processes": [
-    {
-      "name": "ServiceHost",
-      "label": "ServiceHost (POS Program)",
-      "filter": "!-service"
-    },
-    {
-      "name": "ServiceHost",
-      "label": "ServiceHost (System Service)",
-      "filter": "-service"
-    }
-  ],
-  "log_level": "INFO"
-}</code></pre>
-        
-        <div class="highlight">
-            <strong>Note:</strong> The server_url, device_id, and api_key are already configured correctly when you download. You only need to edit this file if you want to monitor additional processes or change settings.
-        </div>
-
-        <h3>Step 4: Run the Agent</h3>
-        
-        <p><strong>Option A: As a Scheduled Task (Recommended)</strong></p>
-        <p>Right-click <strong>INSTALL_AGENT.bat</strong> and select <strong>Run as Administrator</strong>. This will:</p>
+        <p><strong>What's in the ZIP:</strong></p>
         <ul>
-            <li>Install the agent as a scheduled task that runs every minute</li>
-            <li>Start automatically on boot</li>
-            <li>Run even when no user is logged in</li>
+            <li>PowerShell agent script</li>
+            <li>Installation scripts</li>
+            <li><strong>Pre-configured agent_config.json</strong> with your server URL, device ID, and API token already filled in</li>
+            <li>README with instructions</li>
         </ul>
 
-        <p><strong>Option B: Test Manually First</strong></p>
-        <p>Open PowerShell and run:</p>
-        <pre><code>cd "C:\Program Files\PosTracker Agent\netwatch_agent"
-.\netwatch_agent.ps1</code></pre>
-        <p><em>This runs once for testing. Watch the output to verify it connects successfully.</em></p>
+        <div class="success">
+            <strong>The token is already in the package!</strong> You don't need to copy it or edit the config.
+        </div>
 
-        <h3>Step 5: Verify It's Working</h3>
+        <h3>Step 2: Extract and Run on the Target Machine</h3>
+        <ol>
+            <li>Copy the ZIP file to the Windows machine you want to monitor</li>
+            <li>Extract the ZIP to a folder (e.g., <code>C:\PosTracker\agent</code>)</li>
+            <li>Open Command Prompt or PowerShell <strong>as Administrator</strong></li>
+            <li>Go to the extracted folder:
+                <pre><code>cd C:\PosTracker\agent</code></pre>
+            </li>
+            <li>Run the installer:
+                <pre><code>.\INSTALL_AGENT.bat</code></pre>
+            </li>
+        </ol>
+
+        <p>The agent will be installed as a Windows scheduled task. It runs automatically every minute.</p>
+
+        <h3>Step 3: Verify It's Working</h3>
         <p>Go back to PosTracker. Within 1-2 minutes, you should see:</p>
         <ul>
-            <li>Device status shows <strong>UP</strong> or <strong>DEGRADED</strong></li>
-            <li>Agent Status shows <strong>Healthy</strong> with a green indicator</li>
-            <li>Agent metrics appear (CPU, memory, disk, uptime, processes)</li>
-            <li>Last report timestamp shows "X seconds ago"</li>
+            <li>Dashboard shows device as <strong>UP</strong> or <strong>DEGRADED</strong> (green or yellow badge)</li>
+            <li>Device detail page shows CPU, memory, disk, uptime</li>
+            <li>Agent status shows <strong>Healthy</strong> or <strong>Unhealthy</strong></li>
         </ul>
 
-        <div class="alert-box">
-            <strong>If you don't see anything after 2 minutes, check:</strong>
-            <ol>
-                <li>Did you run INSTALL_AGENT.bat as Administrator?</li>
-                <li>Check the agent log file: <code>netwatch_agent.log</code> in the agent folder</li>
-                <li>Run TEST_AGENT.bat to see if the agent can connect</li>
-                <li>Make sure the device ID and API token were automatically configured (they should be!)</li>
-            </ol>
-        </div>
+        <h3>If It Doesn't Show Up</h3>
+        <p>On the Windows machine, run:</p>
+        <pre><code>.\CHECK_STATUS.bat</code></pre>
+
+        <p>This shows if the agent is running and connected. If not:</p>
+        <ul>
+            <li>Check that the config.json has the correct server URL</li>
+            <li>Check that Windows can reach PosTracker (ping or browser test)</li>
+            <li>Check Event Viewer → Application for error messages</li>
+        </ul>
 
         <div class="section-break"></div>
 

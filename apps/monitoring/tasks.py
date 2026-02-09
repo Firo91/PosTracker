@@ -73,8 +73,8 @@ def check_device(self, device_id: int):
     freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
     freshness_cutoff = timezone.now() - timedelta(minutes=freshness_minutes)
     latest_agent = device.agent_reports.first()
-    agent_healthy = latest_agent.agent_healthy if latest_agent else None
     agent_fresh = bool(latest_agent and latest_agent.reported_at >= freshness_cutoff)
+    agent_healthy = latest_agent.agent_healthy if (latest_agent and agent_fresh) else None
     
     # Initialize check result
     check_result = CheckResult(device=device)
