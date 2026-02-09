@@ -244,66 +244,79 @@
         <h2>Installing the Agent</h2>
         <p>Now that you have created the device and API token, you're ready to install the agent on the machine.</p>
 
-        <h3>Step 1: Download the Agent</h3>
-        <p>Go back to the device detail page in PosTracker and click the <strong>Download Agent</strong> button. This downloads the agent installer package.</p>
+        <h3>Step 1: Download the Pre-Configured Agent</h3>
+        <ol>
+            <li>Go to <strong>Dashboard</strong> and select the device you created</li>
+            <li>In the download section, select the API token you created from the dropdown</li>
+            <li>Click <strong>Download Agent</strong></li>
+        </ol>
+        
+        <div class="success">
+            <strong>✓ Automatic Configuration!</strong> When you download the agent, PosTracker automatically creates a pre-configured <code>agent_config.json</code> file with your server URL, device ID, and API token already filled in. No manual editing required!
+        </div>
 
         <h3>Step 2: Extract the Files</h3>
         <p>Extract the ZIP file to a location like:</p>
         <pre><code>C:\Program Files\PosTracker Agent</code></pre>
 
-        <h3>Step 3: Configure the Agent</h3>
-        <p>Edit the <strong>config.json</strong> file with these settings:</p>
+        <h3>Step 3: Verify Configuration (Optional)</h3>
+        <p>If you want to customize process monitoring, you can edit <strong>agent_config.json</strong>. The file is already configured with:</p>
         <pre><code>{
   "server_url": "https://pos.kimsit.com",
-  "api_token": "YOUR_TOKEN_HERE",
-  "device_id": "SERVER_NAME",
-  "report_interval": 60,
-  "services": [
-    "w3svc",
-    "MSSQLSERVER"
-  ],
+  "device_id": 123,
+  "api_key": "your_token_here_automatically_filled",
+  "check_interval": 60,
   "processes": [
-    "PosApp.exe",
-    "BackupService.exe"
-  ]
+    {
+      "name": "ServiceHost",
+      "label": "ServiceHost (POS Program)",
+      "filter": "!-service"
+    },
+    {
+      "name": "ServiceHost",
+      "label": "ServiceHost (System Service)",
+      "filter": "-service"
+    }
+  ],
+  "log_level": "INFO"
 }</code></pre>
-        <ul>
-            <li><strong>api_token</strong> = The token you created in Step 2 above (copy and paste it exactly)</li>
-            <li><strong>services</strong> = Windows services to monitor (optional)</li>
-            <li><strong>processes</strong> = Program names to monitor (optional)</li>
-        </ul>
-
-        <div class="success">
-            <strong>Paste your API token here!</strong> This is the token you saved from the previous section. Make sure you copy it exactly, with no spaces before or after.
+        
+        <div class="highlight">
+            <strong>Note:</strong> The server_url, device_id, and api_key are already configured correctly when you download. You only need to edit this file if you want to monitor additional processes or change settings.
         </div>
 
         <h3>Step 4: Run the Agent</h3>
         
-        <p><strong>Option A: As a Background Service (Recommended)</strong></p>
-        <p>Run as Administrator:</p>
-        <pre><code>cd C:\Program Files\PosTracker Agent
-.\install_service.bat</code></pre>
-        <p>The agent will start automatically on every boot.</p>
+        <p><strong>Option A: As a Scheduled Task (Recommended)</strong></p>
+        <p>Right-click <strong>INSTALL_AGENT.bat</strong> and select <strong>Run as Administrator</strong>. This will:</p>
+        <ul>
+            <li>Install the agent as a scheduled task that runs every minute</li>
+            <li>Start automatically on boot</li>
+            <li>Run even when no user is logged in</li>
+        </ul>
 
-        <p><strong>Option B: Manual (Testing)</strong></p>
-        <pre><code>cd C:\Program Files\PosTracker Agent
-python agent.py</code></pre>
-        <p><em>This runs in your terminal - useful for testing but won't survive a reboot.</em></p>
+        <p><strong>Option B: Test Manually First</strong></p>
+        <p>Open PowerShell and run:</p>
+        <pre><code>cd "C:\Program Files\PosTracker Agent\netwatch_agent"
+.\netwatch_agent.ps1</code></pre>
+        <p><em>This runs once for testing. Watch the output to verify it connects successfully.</em></p>
 
         <h3>Step 5: Verify It's Working</h3>
         <p>Go back to PosTracker. Within 1-2 minutes, you should see:</p>
         <ul>
             <li>Device status shows <strong>UP</strong> or <strong>DEGRADED</strong></li>
-            <li>A green badge appears on the dashboard</li>
+            <li>Agent Status shows <strong>Healthy</strong> with a green indicator</li>
             <li>Agent metrics appear (CPU, memory, disk, uptime, processes)</li>
+            <li>Last report timestamp shows "X seconds ago"</li>
         </ul>
 
         <div class="alert-box">
             <strong>If you don't see anything after 2 minutes, check:</strong>
             <ol>
-                <li>Is the agent running? (Check Task Manager or Services)</li>
-                <li>Is the API token correct in config.json? (Exactly copy-pasted?)</li>
-                <li>Is the server URL correct? (Should be https://pos.kimsit.com)</li>
+                <li>Did you run INSTALL_AGENT.bat as Administrator?</li>
+                <li>Check the agent log file: <code>netwatch_agent.log</code> in the agent folder</li>
+                <li>Run TEST_AGENT.bat to see if the agent can connect</li>
+                <li>Make sure the device ID and API token were automatically configured (they should be!)</li>
             </ol>
         </div>
 
