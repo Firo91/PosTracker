@@ -33,6 +33,12 @@
                         {% if errors.name %}<div class="invalid-feedback">{{ errors.name }}</div>{% endif %}
                     </div>
                     <div class="mb-3">
+                        <label for="country_code" class="form-label">Country Code</label>
+                        <input type="text" name="country_code" id="country_code" maxlength="2" class="form-control {% if errors.country_code %}is-invalid{% endif %}" value="{{ form_data.country_code }}" placeholder="e.g. NO, IS">
+                        {% if errors.country_code %}<div class="invalid-feedback">{{ errors.country_code }}</div>{% endif %}
+                        <div class="form-text">ISO 2-letter code used in ChatWarning alerts.</div>
+                    </div>
+                    <div class="mb-3">
                         <label for="location" class="form-label">Location (optional)</label>
                         <input type="text" name="location" id="location" class="form-control" value="{{ form_data.location }}">
                     </div>
@@ -75,6 +81,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Name</th>
+                                <th>Country</th>
                                 <th>Location</th>
                                 <th>Devices</th>
                                 <th>Created</th>
@@ -85,6 +92,7 @@
                             {% for unit in units %}
                                 <tr>
                                     <td class="fw-semibold">{{ unit.name }}</td>
+                                    <td>{{ unit.country_code|default:'—' }}</td>
                                     <td>{{ unit.location|default:'—' }}</td>
                                     <td>{{ unit.device_count }}</td>
                                     <td><small class="text-muted">{{ unit.created_at|date:'Y-m-d' }}</small></td>

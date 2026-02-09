@@ -367,6 +367,7 @@ def _check_and_send_alerts(device: Device, agent_report=None):
 
         # Only alert on newly down items
         unit_name = device.unit.name if device.unit else None
+        unit_country = device.unit.country_code if device.unit and device.unit.country_code else None
 
         for item_name in newly_down_items:
             logger.warning(f"Sending process alert for {device.name}: {item_name} down")
@@ -374,7 +375,8 @@ def _check_and_send_alerts(device: Device, agent_report=None):
                 device_name=device.name,
                 process_name=item_name,
                 channel_name='alerts',
-                unit_name=unit_name
+                unit_name=unit_name,
+                unit_country=unit_country
             )
 
         # Send recovery alerts when items come back up
@@ -384,7 +386,8 @@ def _check_and_send_alerts(device: Device, agent_report=None):
                 device_name=device.name,
                 process_name=item_name,
                 channel_name='alerts',
-                unit_name=unit_name
+                unit_name=unit_name,
+                unit_country=unit_country
             )
 
         # Save last_down_services once (clears list when recovered)
@@ -399,7 +402,9 @@ def _check_and_send_alerts(device: Device, agent_report=None):
                 device_name=device.name,
                 cpu_percent=agent_report.cpu_percent,
                 threshold=alert_cpu_threshold,
-                channel_name='alerts'
+                channel_name='alerts',
+                unit_name=unit_name,
+                unit_country=unit_country
             )
         
         # Check memory usage
@@ -409,7 +414,9 @@ def _check_and_send_alerts(device: Device, agent_report=None):
                 device_name=device.name,
                 memory_percent=agent_report.memory_percent,
                 threshold=alert_memory_threshold,
-                channel_name='alerts'
+                channel_name='alerts',
+                unit_name=unit_name,
+                unit_country=unit_country
             )
         
         # Check disk usage
@@ -419,7 +426,9 @@ def _check_and_send_alerts(device: Device, agent_report=None):
                 device_name=device.name,
                 disk_percent=agent_report.disk_percent,
                 threshold=alert_disk_threshold,
-                channel_name='alerts'
+                channel_name='alerts',
+                unit_name=unit_name,
+                unit_country=unit_country
             )
         
         # Check uptime (recommend reboot after N days)
@@ -429,7 +438,9 @@ def _check_and_send_alerts(device: Device, agent_report=None):
                 device_name=device.name,
                 uptime_hours=agent_report.uptime_hours,
                 threshold_days=alert_uptime_threshold_days,
-                channel_name='alerts'
+                channel_name='alerts',
+                unit_name=unit_name,
+                unit_country=unit_country
             )
     
     except Exception as e:
@@ -452,7 +463,9 @@ def _send_status_change_alert(device: Device, old_status: str, new_status: str, 
             old_status=old_status,
             new_status=new_status,
             reason=reason,
-            channel_name='alerts'
+            channel_name='alerts',
+            unit_name=device.unit.name if device.unit else None,
+            unit_country=device.unit.country_code if device.unit and device.unit.country_code else None
         )
     except Exception as exc:
         logger.error(
@@ -490,6 +503,7 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
     try:
         channel_name = 'alerts'
         unit_name = device.unit.name if device.unit else None
+        unit_country = device.unit.country_code if device.unit and device.unit.country_code else None
         sent = send_device_alert(
             device_name=device.name,
             status=status,
@@ -498,7 +512,8 @@ def _send_status_once_per_status(device: Device, status: str, reason: str) -> No
             channel_name=channel_name,
             previous_status=last_alert.new_status if last_alert else '',
             severity='critical' if status == 'DOWN' else 'warning' if status == 'DEGRADED' else 'info',
-            unit_name=unit_name
+            unit_name=unit_name,
+            unit_country=unit_country
         )
 
         logger.info(f"Alert send result for {device.name}: {sent}")
@@ -559,7 +574,9 @@ def _send_status_update_alert(
             alert_type='STATUS_UPDATE',
             message=message,
             channel_name='alerts',
-            severity='info'
+            severity='info',
+            unit_name=device.unit.name if device.unit else None,
+            unit_country=device.unit.country_code if device.unit and device.unit.country_code else None
         )
     except Exception as exc:
         logger.error(
@@ -584,6 +601,7 @@ def _send_ping_alert(device: Device, old_ping_status: str, new_ping_status: str)
         return
     
     unit_name = device.unit.name if device.unit else None
+    unit_country = device.unit.country_code if device.unit and device.unit.country_code else None
     severity = "info" if new_ping_status == "UP" else "warning"
     message = f"Ping status: {old_ping_status} → {new_ping_status}"
     
@@ -596,7 +614,8 @@ def _send_ping_alert(device: Device, old_ping_status: str, new_ping_status: str)
             channel_name='alerts',
             previous_status=old_ping_status,
             severity=severity,
-            unit_name=unit_name
+            unit_name=unit_name,
+            unit_country=unit_country
         )
         logger.info(f"Ping alert sent for {device.name}: {old_ping_status} → {new_ping_status}")
     except Exception as exc:
@@ -622,6 +641,7 @@ def _send_agent_alert(device: Device, old_agent_status: str, new_agent_status: s
         return
     
     unit_name = device.unit.name if device.unit else None
+    unit_country = device.unit.country_code if device.unit and device.unit.country_code else None
     severity = "info" if new_agent_status == "UP" else "warning"
     message = f"Agent status: {old_agent_status} → {new_agent_status}"
     
@@ -634,7 +654,8 @@ def _send_agent_alert(device: Device, old_agent_status: str, new_agent_status: s
             channel_name='alerts',
             previous_status=old_agent_status,
             severity=severity,
-            unit_name=unit_name
+            unit_name=unit_name,
+            unit_country=unit_country
         )
         logger.info(f"Agent alert sent for {device.name}: {old_agent_status} → {new_agent_status}")
     except Exception as exc:

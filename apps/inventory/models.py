@@ -19,6 +19,11 @@ class Unit(models.Model):
         unique=True,
         help_text="Unit/brand/store name"
     )
+    country_code = models.CharField(
+        max_length=2,
+        blank=True,
+        help_text="ISO 2-letter country code (e.g., NO, IS)"
+    )
     description = models.TextField(
         blank=True,
         help_text="Optional description for this unit"

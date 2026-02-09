@@ -6,6 +6,7 @@
     <div>
         <div class="text-muted small">Unit</div>
         <h2 class="mb-0">{{ unit.name }}</h2>
+        {% if unit.country_code %}<div class="text-muted">{{ unit.country_code }}</div>{% endif %}
         {% if unit.location %}<div class="text-muted">{{ unit.location }}</div>{% endif %}
     </div>
     <div class="ms-auto d-flex gap-2">

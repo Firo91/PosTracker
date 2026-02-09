@@ -15,6 +15,7 @@
             <thead class="table-light">
                 <tr>
                     <th style="width: 28%">Unit</th>
+                    <th style="width: 10%">Country</th>
                     <th style="width: 18%">Online</th>
                     <th style="width: 18%">Offline</th>
                     <th style="width: 18%">Unknown</th>
@@ -31,6 +32,7 @@
                                     <div class="text-muted small">{{ unit.description }}</div>
                                 {% endif %}
                             </td>
+                            <td>{{ unit.country_code|default:'—' }}</td>
                             <td class="text-success fw-semibold">{{ unit.online_count }}</td>
                             <td class="text-danger fw-semibold">{{ unit.offline_count }}</td>
                             <td class="text-muted fw-semibold">{{ unit.unknown_count }}</td>
@@ -39,7 +41,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-4">No units found.</td>
+                        <td colspan="6" class="text-center text-muted py-4">No units found.</td>
                     </tr>
                 {% endif %}
             </tbody>

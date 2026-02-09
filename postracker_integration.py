@@ -89,7 +89,8 @@ class ChatWarningIntegration:
         channel_name: str = 'alerts',
         previous_status: Optional[str] = None,
         severity: str = 'info',
-        unit_name: Optional[str] = None
+        unit_name: Optional[str] = None,
+        unit_country: Optional[str] = None
     ) -> bool:
         """
         Send an alert to ChatWarning.
@@ -150,8 +151,10 @@ class ChatWarningIntegration:
                 return False
             
             # Build alert title - show status transition if applicable
-            if unit_name:
-                device_label = f"{device_name} ({unit_name})"
+            if unit_country and unit_name:
+                device_label = f"{unit_country} - {unit_name} - {device_name}"
+            elif unit_name:
+                device_label = f"{unit_name} - {device_name}"
             else:
                 device_label = device_name
             
@@ -225,7 +228,8 @@ def send_device_alert(
     channel_name: str = 'alerts',
     previous_status: Optional[str] = None,
     severity: str = 'info',
-    unit_name: Optional[str] = None
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a device alert to ChatWarning.
@@ -241,6 +245,7 @@ def send_device_alert(
         previous_status: Previous status (for status changes)
         severity: Alert severity (info, warning, critical)
         unit_name: Unit name (optional, added to title if provided)
+        unit_country: Unit country code (optional, added to title if provided)
         
     Returns:
         True if alert sent successfully, False otherwise
@@ -253,7 +258,8 @@ def send_device_alert(
         channel_name=channel_name,
         previous_status=previous_status,
         severity=severity,
-        unit_name=unit_name
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -261,7 +267,8 @@ def send_process_alert(
     device_name: str,
     process_name: str,
     channel_name: str = 'alerts',
-    unit_name: Optional[str] = None
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a process down alert.
@@ -281,7 +288,8 @@ def send_process_alert(
         message=f'Process "{process_name}" is not running',
         channel_name=channel_name,
         severity='critical',
-        unit_name=unit_name
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -289,7 +297,8 @@ def send_process_recovery_alert(
     device_name: str,
     process_name: str,
     channel_name: str = 'alerts',
-    unit_name: Optional[str] = None
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a process recovery alert.
@@ -309,7 +318,8 @@ def send_process_recovery_alert(
         message=f'Process "{process_name}" is running again',
         channel_name=channel_name,
         severity='info',
-        unit_name=unit_name
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -317,7 +327,9 @@ def send_cpu_alert(
     device_name: str,
     cpu_percent: float,
     threshold: float = 80.0,
-    channel_name: str = 'alerts'
+    channel_name: str = 'alerts',
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a high CPU alert.
@@ -337,7 +349,9 @@ def send_cpu_alert(
         alert_type='CPU_HIGH',
         message=f'CPU usage is {cpu_percent:.1f}% (threshold: {threshold:.1f}%)',
         channel_name=channel_name,
-        severity='warning'
+        severity='warning',
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -345,7 +359,9 @@ def send_memory_alert(
     device_name: str,
     memory_percent: float,
     threshold: float = 80.0,
-    channel_name: str = 'alerts'
+    channel_name: str = 'alerts',
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a high memory/RAM alert.
@@ -365,7 +381,9 @@ def send_memory_alert(
         alert_type='RAM_HIGH',
         message=f'Memory usage is {memory_percent:.1f}% (threshold: {threshold:.1f}%)',
         channel_name=channel_name,
-        severity='warning'
+        severity='warning',
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -373,7 +391,9 @@ def send_storage_alert(
     device_name: str,
     disk_percent: float,
     threshold: float = 90.0,
-    channel_name: str = 'alerts'
+    channel_name: str = 'alerts',
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a high storage/disk alert.
@@ -393,7 +413,9 @@ def send_storage_alert(
         alert_type='STORAGE_HIGH',
         message=f'Storage usage is {disk_percent:.1f}% (threshold: {threshold:.1f}%)',
         channel_name=channel_name,
-        severity='warning'
+        severity='warning',
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -401,7 +423,9 @@ def send_uptime_alert(
     device_name: str,
     uptime_hours: float,
     threshold_days: int = 30,
-    channel_name: str = 'alerts'
+    channel_name: str = 'alerts',
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send an alert for device running longer than threshold.
@@ -422,7 +446,9 @@ def send_uptime_alert(
         alert_type='UPTIME_LONG',
         message=f'Device has been running for {uptime_days:.1f} days (threshold: {threshold_days} days). Consider reboot.',
         channel_name=channel_name,
-        severity='info'
+        severity='info',
+        unit_name=unit_name,
+        unit_country=unit_country
     )
 
 
@@ -431,7 +457,9 @@ def send_status_change_alert(
     old_status: str,
     new_status: str,
     reason: str = '',
-    channel_name: str = 'server-monitoring'
+    channel_name: str = 'server-monitoring',
+    unit_name: Optional[str] = None,
+    unit_country: Optional[str] = None
 ) -> bool:
     """
     Send a device status change alert.
@@ -465,5 +493,7 @@ def send_status_change_alert(
         message=message,
         channel_name=channel_name,
         previous_status=old_status,
-        severity=severity
+        severity=severity,
+        unit_name=unit_name,
+        unit_country=unit_country
     )

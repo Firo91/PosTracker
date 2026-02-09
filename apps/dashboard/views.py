@@ -542,6 +542,7 @@ def manage_units(request):
     errors = {}
     form_data = {
         'name': '',
+        'country_code': '',
         'location': '',
         'description': '',
         'devices': [],
@@ -549,6 +550,7 @@ def manage_units(request):
 
     if request.method == 'POST':
         form_data['name'] = request.POST.get('name', '').strip()
+        form_data['country_code'] = request.POST.get('country_code', '').strip().upper()
         form_data['location'] = request.POST.get('location', '').strip()
         form_data['description'] = request.POST.get('description', '').strip()
         form_data['devices'] = request.POST.getlist('devices')
@@ -559,9 +561,15 @@ def manage_units(request):
         elif Unit.objects.filter(name__iexact=form_data['name']).exists():
             errors['name'] = 'A unit with this name already exists.'
 
+        if form_data['country_code']:
+            import re
+            if not re.match(r'^[A-Z]{2}$', form_data['country_code']):
+                errors['country_code'] = 'Use a 2-letter ISO code (e.g., NO, IS).'
+
         if not errors:
             unit = Unit.objects.create(
                 name=form_data['name'],
+                country_code=form_data['country_code'],
                 location=form_data['location'],
                 description=form_data['description'],
             )

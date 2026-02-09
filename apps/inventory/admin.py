@@ -95,8 +95,8 @@ class DeviceAdmin(admin.ModelAdmin):
 
 @admin.register(Unit)
 class UnitAdmin(admin.ModelAdmin):
-    list_display = ('name', 'location', 'description', 'created_at')
-    search_fields = ('name', 'location', 'description')
+    list_display = ('name', 'country_code', 'location', 'description', 'created_at')
+    search_fields = ('name', 'country_code', 'location', 'description')
 
 
 @admin.register(APIToken)
