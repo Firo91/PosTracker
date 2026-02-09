@@ -193,6 +193,9 @@ def check_device(self, device_id: int):
     # Send separate alerts for agent state changes
     current_agent_state = agent_healthy
     old_agent_state = device.last_agent_state
+    first_agent_report = bool(
+        latest_agent and not device.agent_reports.exclude(id=latest_agent.id).exists()
+    )
     
     # Detect agent state changes:
     # 1. Agent went from healthy/unhealthy to stopped reporting (None)
@@ -210,9 +213,12 @@ def check_device(self, device_id: int):
         if old_agent_state is None:
             # First detection or recovery from no data
             agent_status_text = "UP" if current_agent_state else "DOWN"
+            old_agent_text = "UNKNOWN" if first_agent_report else "DOWN"
             if getattr(settings, 'ALERT_SEND_AGENT_ALERTS', False):
-                _send_agent_alert(device, "DOWN", agent_status_text)
-                logger.info(f"Agent reporting resumed for {device.name}: DOWN → {agent_status_text}")
+                _send_agent_alert(device, old_agent_text, agent_status_text)
+                logger.info(
+                    f"Agent reporting resumed for {device.name}: {old_agent_text} → {agent_status_text}"
+                )
         elif current_agent_state != old_agent_state:
             # State changed while reporting
             agent_status_text = "UP" if current_agent_state else "DOWN"
