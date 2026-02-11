@@ -324,12 +324,12 @@
                     <tr>
                         <td><small>{{ change.changed_at|date:"Y-m-d H:i:s" }}</small></td>
                         <td>
-                            <span class="badge bg-{% if change.old_status %}success{% else %}danger{% endif %}">
-                                {% if change.old_status %}Healthy{% else %}Unhealthy{% endif %}
+                            <span class="badge bg-{% if change.old_status is None %}secondary{% elif change.old_status %}success{% else %}danger{% endif %}">
+                                {% if change.old_status is None %}No contact{% elif change.old_status %}Healthy{% else %}Unhealthy{% endif %}
                             </span>
                             → 
-                            <span class="badge bg-{% if change.new_status %}success{% else %}danger{% endif %}">
-                                {% if change.new_status %}Healthy{% else %}Unhealthy{% endif %}
+                            <span class="badge bg-{% if change.new_status is None %}secondary{% elif change.new_status %}success{% else %}danger{% endif %}">
+                                {% if change.new_status is None %}No contact{% elif change.new_status %}Healthy{% else %}Unhealthy{% endif %}
                             </span>
                         </td>
                         <td><small>{{ change.reason }}</small></td>
@@ -428,68 +428,84 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for report in recent_agent_reports %}
-                    <tr>
-                        <td>
-                            <small>{{ report.reported_at|date:"Y-m-d H:i:s" }}</small>
-                        </td>
-                        <td>
-                            {% if report.agent_healthy %}
-                                <span class="badge bg-success">Healthy</span>
-                            {% else %}
-                                <span class="badge bg-danger">Unhealthy</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if report.cpu_percent %}
-                                <span class="{% if report.cpu_percent > 85 %}text-danger{% elif report.cpu_percent > 70 %}text-warning{% endif %}">
-                                    {{ report.cpu_percent|floatformat:0 }}%
-                                </span>
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if report.memory_percent %}
-                                <span class="{% if report.memory_percent > 90 %}text-danger{% elif report.memory_percent > 75 %}text-warning{% endif %}">
-                                    {{ report.memory_percent|floatformat:0 }}%
-                                </span>
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if report.disk_percent %}
-                                <span class="{% if report.disk_percent > 90 %}text-danger{% elif report.disk_percent > 75 %}text-warning{% endif %}">
-                                    {{ report.disk_percent|floatformat:0 }}%
-                                </span>
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if report.processes_status %}
-                                <small>
-                                    {% for name, status in report.processes_status.items %}
-                                        {% if status.running %}
-                                            <span class="text-success">✓</span>
-                                        {% else %}
-                                            <span class="text-danger">✗</span>
-                                        {% endif %}
-                                        {{ name|truncatewords:2 }}{% if not forloop.last %}, {% endif %}
-                                    {% endfor %}
-                                </small>
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                    </tr>
+                    {% for entry in agent_timeline %}
+                        {% if entry.type == 'gap' %}
+                            <tr class="table-danger">
+                                <td>
+                                    <small>{{ entry.start|date:"Y-m-d H:i:s" }} → {{ entry.end|date:"Y-m-d H:i:s" }}</small>
+                                    <div class="text-muted small">No contact for {{ entry.start|timesince:entry.end }}</div>
+                                </td>
+                                <td><span class="badge bg-danger">No contact</span></td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td class="text-muted">No agent data</td>
+                            </tr>
+                        {% else %}
+                            {% with report=entry.report %}
+                            <tr>
+                                <td>
+                                    <small>{{ report.reported_at|date:"Y-m-d H:i:s" }}</small>
+                                </td>
+                                <td>
+                                    {% if report.agent_healthy %}
+                                        <span class="badge bg-success">Healthy</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Unhealthy</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.cpu_percent %}
+                                        <span class="{% if report.cpu_percent > 85 %}text-danger{% elif report.cpu_percent > 70 %}text-warning{% endif %}">
+                                            {{ report.cpu_percent|floatformat:0 }}%
+                                        </span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.memory_percent %}
+                                        <span class="{% if report.memory_percent > 90 %}text-danger{% elif report.memory_percent > 75 %}text-warning{% endif %}">
+                                            {{ report.memory_percent|floatformat:0 }}%
+                                        </span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.disk_percent %}
+                                        <span class="{% if report.disk_percent > 90 %}text-danger{% elif report.disk_percent > 75 %}text-warning{% endif %}">
+                                            {{ report.disk_percent|floatformat:0 }}%
+                                        </span>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if report.processes_status %}
+                                        <small>
+                                            {% for name, status in report.processes_status.items %}
+                                                {% if status.running %}
+                                                    <span class="text-success">✓</span>
+                                                {% else %}
+                                                    <span class="text-danger">✗</span>
+                                                {% endif %}
+                                                {{ name|truncatewords:2 }}{% if not forloop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </small>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endwith %}
+                        {% endif %}
                     {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center text-muted">
-                            No agent reports in the selected time range.
-                        </td>
-                    </tr>
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                No agent reports in the selected time range.
+                            </td>
+                        </tr>
                     {% endfor %}
                 </tbody>
             </table>

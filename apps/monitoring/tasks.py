@@ -207,6 +207,19 @@ def check_device(self, device_id: int):
         if getattr(settings, 'ALERT_SEND_AGENT_ALERTS', False):
             _send_agent_alert(device, old_agent_text, "DOWN")
             logger.info(f"Agent stopped reporting for {device.name}: {old_agent_text} → DOWN (no data)")
+        try:
+            from apps.monitoring.models import AgentStatusHistory
+            AgentStatusHistory.objects.create(
+                device=device,
+                old_status=old_agent_state,
+                new_status=None,
+                reason="No recent agent data"
+            )
+        except Exception as exc:
+            logger.error(
+                f"Error recording agent no-contact history for {device.name}: {exc}",
+                exc_info=True
+            )
         device.last_agent_state = None
     elif current_agent_state is not None:
         # Agent is reporting
@@ -218,6 +231,20 @@ def check_device(self, device_id: int):
                 _send_agent_alert(device, old_agent_text, agent_status_text)
                 logger.info(
                     f"Agent reporting resumed for {device.name}: {old_agent_text} → {agent_status_text}"
+                )
+            try:
+                from apps.monitoring.models import AgentStatusHistory
+                reason = "First agent report" if first_agent_report else "Agent reporting resumed"
+                AgentStatusHistory.objects.create(
+                    device=device,
+                    old_status=None,
+                    new_status=current_agent_state,
+                    reason=reason
+                )
+            except Exception as exc:
+                logger.error(
+                    f"Error recording agent recovery history for {device.name}: {exc}",
+                    exc_info=True
                 )
         elif current_agent_state != old_agent_state:
             # State changed while reporting

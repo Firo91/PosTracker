@@ -189,14 +189,44 @@ def device_detail_view(request, device_id):
     # Calculate limit based on hours: estimate 1 report per minute = 60 per hour
     # Add 50% buffer for safety, so: hours * 60 * 1.5, minimum 1000
     report_limit = max(int(hours * 60 * 1.5), 1000)
-    recent_agent_reports = device.agent_reports.filter(
+    recent_agent_reports = list(device.agent_reports.filter(
         reported_at__gte=since
-    ).order_by('-reported_at')[:report_limit]
+    ).order_by('-reported_at')[:report_limit])
+
+    # Build an agent timeline that includes no-contact gaps
+    agent_timeline = []
+    freshness_delta = timedelta(minutes=freshness_minutes)
+    now = timezone.now()
+
+    if recent_agent_reports:
+        latest_report = recent_agent_reports[0]
+        if now - latest_report.reported_at > freshness_delta:
+            agent_timeline.append({
+                'type': 'gap',
+                'start': latest_report.reported_at,
+                'end': now,
+            })
+
+        for idx, report in enumerate(recent_agent_reports):
+            agent_timeline.append({
+                'type': 'report',
+                'report': report,
+            })
+
+            if idx + 1 < len(recent_agent_reports):
+                next_report = recent_agent_reports[idx + 1]
+                gap = report.reported_at - next_report.reported_at
+                if gap > freshness_delta:
+                    agent_timeline.append({
+                        'type': 'gap',
+                        'start': next_report.reported_at,
+                        'end': report.reported_at,
+                    })
 
     context = {
         'device': device,
         'recent_results': recent_results[:100],
-        'recent_agent_reports': recent_agent_reports,
+        'agent_timeline': agent_timeline,
         'latest_result': latest_result,
         'latest_agent_report': latest_agent_report,
         'agent_report_is_fresh': agent_report_is_fresh,

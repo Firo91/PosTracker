@@ -61,10 +61,14 @@ class AgentStatusHistory(models.Model):
     )
     
     old_status = models.BooleanField(
-        help_text="Previous agent health status (True=healthy, False=unhealthy)"
+        null=True,
+        blank=True,
+        help_text="Previous agent health status (True=healthy, False=unhealthy, None=no contact)"
     )
     new_status = models.BooleanField(
-        help_text="New agent health status (True=healthy, False=unhealthy)"
+        null=True,
+        blank=True,
+        help_text="New agent health status (True=healthy, False=unhealthy, None=no contact)"
     )
     
     changed_at = models.DateTimeField(
@@ -87,8 +91,8 @@ class AgentStatusHistory(models.Model):
         verbose_name_plural = "Agent status histories"
     
     def __str__(self):
-        old_text = "Healthy" if self.old_status else "Unhealthy"
-        new_text = "Healthy" if self.new_status else "Unhealthy"
+        old_text = "No contact" if self.old_status is None else "Healthy" if self.old_status else "Unhealthy"
+        new_text = "No contact" if self.new_status is None else "Healthy" if self.new_status else "Unhealthy"
         return f"{self.device.name} Agent: {old_text} → {new_text} at {self.changed_at}"
 
 
