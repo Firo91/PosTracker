@@ -297,11 +297,17 @@ class Device(models.Model):
         agent_fresh = bool(latest_agent and latest_agent.reported_at >= freshness_cutoff)
         
         # Logic:
-        # - If ping fails but agent recently reports → treat as reachable (UP/DEGRADED)
+        # - If ping is disabled: agent healthy → UP, agent unhealthy → DOWN, no fresh data → UNKNOWN
+        # - If ping fails but agent recently reports → treat as reachable (DEGRADED/UP)
         # - If ping fails and no fresh agent → DOWN
         # - If ping OK but agent unhealthy → DEGRADED (reachable but services down)
         # - If ping OK and agent healthy → UP
         # - If no data → UNKNOWN/agent-driven status
+
+        if self.ping_enabled is False:
+            if agent_fresh:
+                return 'UP' if agent_healthy is True else 'DOWN'
+            return 'UNKNOWN'
         
         if ping_ok is False:
             if agent_fresh:
