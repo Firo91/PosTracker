@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('monitoring', '0008_device_last_down_services'),
+        ('monitoring', '0006_agentstatushistory'),
     ]
 
     operations = [
