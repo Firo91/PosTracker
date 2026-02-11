@@ -126,7 +126,12 @@ def check_device(self, device_id: int):
             reason = "No recent agent data"
     elif check_result.ping_ok is False:
         if agent_fresh:
-            reason = "Ping failed but agent reporting; treating as reachable"
+            if agent_healthy is False:
+                reason = "Ping failed and agent unhealthy"
+            elif agent_healthy is True:
+                reason = "Ping failed but agent healthy; treating as reachable"
+            else:
+                reason = "Ping failed but agent reporting"
         else:
             reason = "Ping failed"
     elif check_result.ping_ok is True:

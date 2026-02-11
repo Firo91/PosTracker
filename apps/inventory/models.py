@@ -305,7 +305,11 @@ class Device(models.Model):
         
         if ping_ok is False:
             if agent_fresh:
-                return 'DEGRADED' if agent_healthy is False else 'UP'
+                if agent_healthy is False:
+                    return 'DOWN'
+                if agent_healthy is True:
+                    return 'DEGRADED'
+                return 'DOWN'
             return 'DOWN'
 
         if ping_ok is True:
