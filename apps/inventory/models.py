@@ -298,7 +298,9 @@ class Device(models.Model):
         
         # Logic:
         # - If ping is disabled: agent healthy → UP, agent unhealthy → DOWN, no fresh data → UNKNOWN
-        # - If ping fails but agent recently reports → treat as reachable (DEGRADED/UP)
+        # - If ping fails but agent recently reports:
+        #   - healthy agent → UP
+        #   - unhealthy agent → DOWN
         # - If ping fails and no fresh agent → DOWN
         # - If ping OK but agent unhealthy → DEGRADED (reachable but services down)
         # - If ping OK and agent healthy → UP
@@ -314,7 +316,7 @@ class Device(models.Model):
                 if agent_healthy is False:
                     return 'DOWN'
                 if agent_healthy is True:
-                    return 'DEGRADED'
+                    return 'UP'
                 return 'DOWN'
             return 'DOWN'
 

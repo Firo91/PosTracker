@@ -129,7 +129,7 @@ def check_device(self, device_id: int):
             if agent_healthy is False:
                 reason = "Ping failed and agent unhealthy"
             elif agent_healthy is True:
-                reason = "Ping failed but agent healthy; treating as reachable"
+                reason = "Ping failed but agent healthy; treating as UP"
             else:
                 reason = "Ping failed but agent reporting"
         else:
