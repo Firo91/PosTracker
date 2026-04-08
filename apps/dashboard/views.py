@@ -712,7 +712,8 @@ def download_agent_package(request):
     # Prepare response
     zip_buffer.seek(0)
     response = HttpResponse(zip_buffer.getvalue(), content_type='application/zip')
-    response['Content-Disposition'] = f'attachment; filename="netwatch_agent_{device.name}.zip"'
+    zip_name = device.unit.name.upper() if device.unit else device.name.upper()
+    response['Content-Disposition'] = f'attachment; filename="netwatch_agent_{zip_name}.zip"'
     
     logger.info(f"Agent package downloaded for device {device.name} by {request.user.username}")
     

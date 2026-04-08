@@ -26,7 +26,7 @@
                             <option value="">-- Choose Device --</option>
                             {% for dev in devices %}
                                 <option value="{{ dev.id }}" {% if device and dev.id == device.id %}selected{% endif %}>
-                                    {{ dev.name }} ({{ dev.ip_address }})
+                                    {% if dev.unit %}{{ dev.unit.name|upper }} - {% endif %}{{ dev.name|upper }} ({{ dev.ip_address }})
                                 </option>
                             {% endfor %}
                         </select>
