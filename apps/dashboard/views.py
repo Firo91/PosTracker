@@ -35,6 +35,7 @@ def dashboard_view(request):
     unit_id = request.GET.get('unit', '')
     search = request.GET.get('search', '')
     enabled_filter = request.GET.get('enabled', 'all')
+    sort = request.GET.get('sort', 'name')
 
     # Get user's allowed devices
     try:
@@ -99,8 +100,16 @@ def dashboard_view(request):
     freshness_minutes = getattr(settings, 'AGENT_FRESH_MINUTES', 10)
     freshness_cutoff = timezone.now() - timedelta(minutes=freshness_minutes)
     
+    sort_options = {
+        'name': 'name',
+        '-name': '-name',
+        'unit': 'unit__name',
+        '-unit': '-unit__name',
+    }
+    order_by = sort_options.get(sort, 'name')
+
     devices_with_freshness = []
-    for device in devices.order_by('name'):
+    for device in devices.order_by(order_by):
         latest_agent = device.agent_reports.first()
         is_fresh = bool(latest_agent and latest_agent.reported_at >= freshness_cutoff)
         devices_with_freshness.append({
@@ -119,6 +128,7 @@ def dashboard_view(request):
             'search': search,
             'unit': unit_id,
             'enabled': enabled_filter,
+            'sort': sort,
         },
         'device_types': Device.DEVICE_TYPE_CHOICES,
         'statuses': Device.STATUS_CHOICES,

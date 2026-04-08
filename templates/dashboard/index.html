@@ -130,8 +130,36 @@
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
-                    <th>Device Name</th>
-                    <th>Unit</th>
+                    <th>
+                        {% if filters.sort == 'name' %}
+                            <a href="?device_type={{ filters.device_type }}&status={{ filters.status }}&location={{ filters.location }}&unit={{ filters.unit }}&search={{ filters.search }}&enabled={{ filters.enabled }}&sort=-name" class="text-decoration-none text-dark">
+                                Device Name <i class="bi bi-sort-alpha-down"></i>
+                            </a>
+                        {% elif filters.sort == '-name' %}
+                            <a href="?device_type={{ filters.device_type }}&status={{ filters.status }}&location={{ filters.location }}&unit={{ filters.unit }}&search={{ filters.search }}&enabled={{ filters.enabled }}&sort=name" class="text-decoration-none text-dark">
+                                Device Name <i class="bi bi-sort-alpha-up"></i>
+                            </a>
+                        {% else %}
+                            <a href="?device_type={{ filters.device_type }}&status={{ filters.status }}&location={{ filters.location }}&unit={{ filters.unit }}&search={{ filters.search }}&enabled={{ filters.enabled }}&sort=name" class="text-decoration-none text-secondary">
+                                Device Name <i class="bi bi-sort-alpha-down-alt"></i>
+                            </a>
+                        {% endif %}
+                    </th>
+                    <th>
+                        {% if filters.sort == 'unit' %}
+                            <a href="?device_type={{ filters.device_type }}&status={{ filters.status }}&location={{ filters.location }}&unit={{ filters.unit }}&search={{ filters.search }}&enabled={{ filters.enabled }}&sort=-unit" class="text-decoration-none text-dark">
+                                Unit <i class="bi bi-sort-alpha-down"></i>
+                            </a>
+                        {% elif filters.sort == '-unit' %}
+                            <a href="?device_type={{ filters.device_type }}&status={{ filters.status }}&location={{ filters.location }}&unit={{ filters.unit }}&search={{ filters.search }}&enabled={{ filters.enabled }}&sort=unit" class="text-decoration-none text-dark">
+                                Unit <i class="bi bi-sort-alpha-up"></i>
+                            </a>
+                        {% else %}
+                            <a href="?device_type={{ filters.device_type }}&status={{ filters.status }}&location={{ filters.location }}&unit={{ filters.unit }}&search={{ filters.search }}&enabled={{ filters.enabled }}&sort=unit" class="text-decoration-none text-secondary">
+                                Unit <i class="bi bi-sort-alpha-down-alt"></i>
+                            </a>
+                        {% endif %}
+                    </th>
                     <th>IP Address</th>
                     <th>Type</th>
                     <th>Location</th>
