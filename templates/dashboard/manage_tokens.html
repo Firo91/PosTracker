@@ -27,7 +27,7 @@
                     <select id="device_id" name="device_id" class="form-select">
                         <option value="">None (Generic - All Devices)</option>
                         {% for device in devices %}
-                            <option value="{{ device.id }}">{{ device.name }} ({{ device.ip_address }})</option>
+                            <option value="{{ device.id }}">{% if device.unit %}{{ device.unit.name|upper }} - {% endif %}{{ device.name|upper }} ({{ device.ip_address }})</option>
                         {% endfor %}
                     </select>
                     <small class="form-text text-muted">Leave blank for a generic token that can query all devices</small>
@@ -108,7 +108,7 @@
                             <td>
                                 {% if token.device %}
                                     <a href="{% url 'dashboard:device_detail' token.device.id %}">
-                                        {{ token.device.name }}
+                                        {% if token.device.unit %}{{ token.device.unit.name|upper }} - {% endif %}{{ token.device.name|upper }}
                                     </a>
                                 {% else %}
                                     <span class="text-muted">Generic</span>
